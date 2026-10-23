@@ -2,6 +2,7 @@
 import json
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 
 from flask import (
@@ -67,7 +68,6 @@ def create_app(test_config=None):
 
     init_db(app.config['DATABASE_PATH'])
 
-    # Chỉ tạo hoặc nâng quyền admin từ cấu hình bí mật phía máy chủ.
     if app.config.get('ADMIN_PASSWORD'):
         with connect(app.config['DATABASE_PATH']) as db:
             row = db.execute(
@@ -112,6 +112,69 @@ def create_app(test_config=None):
     def admin_required():
         user = current_user()
         return user if user and user['is_admin'] else None
+
+    def parse_contest_time(value):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError('Thiếu thời gian bắt đầu hoặc kết thúc.')
+
+        try:
+            result = datetime.fromisoformat(value.strip())
+        except ValueError:
+            raise ValueError('Thời gian không hợp lệ.')
+
+        if result.tzinfo is not None:
+            raise ValueError('Hãy nhập thời gian địa phương.')
+
+        return result
+
+    def contest_state(contest):
+        now = datetime.now()
+        start = parse_contest_time(contest['start_time'])
+        end = parse_contest_time(contest['end_time'])
+
+        if now < start:
+            return 'upcoming'
+        if now >= end:
+            return 'ended'
+        return 'running'
+
+    def get_contest_data(contest_id, allow_hidden=False):
+        with connect(app.config['DATABASE_PATH']) as db:
+            contest = db.execute(
+                'SELECT * FROM contests WHERE id=?',
+                (contest_id,)
+            ).fetchone()
+
+            if not contest:
+                return None
+
+            if not contest['is_visible'] and not allow_hidden:
+                return None
+
+            ids = db.execute(
+                '''SELECT problem_id FROM contest_problems
+                   WHERE contest_id=?
+                   ORDER BY position, problem_id''',
+                (contest_id,)
+            ).fetchall()
+
+        item = dict(contest)
+        item['is_visible'] = bool(item['is_visible'])
+        item['problem_ids'] = [r['problem_id'] for r in ids]
+        bank = {p['id']: p for p in problems()}
+
+        item['problems'] = [
+            {
+                'id': pid,
+                'title': bank[pid].get('title', pid),
+                'total_score': bank[pid]['total_score']
+            }
+            for pid in item['problem_ids']
+            if pid in bank
+        ]
+
+        item['state'] = contest_state(item)
+        return item
 
     @app.get('/health')
     def health():
@@ -306,18 +369,23 @@ def create_app(test_config=None):
 
         with connect(app.config['DATABASE_PATH']) as db:
             rows = db.execute(
-                '''SELECT id, problem_id, verdict, score, max_score,
-                          details_json, created_at
+                '''SELECT id, problem_id, language_id, verdict,
+                          score, max_score, details_json, created_at,
+                          contest_id
                    FROM submissions
                    WHERE user_id=?
                    ORDER BY id DESC LIMIT 200''',
                 (user['id'],)
             ).fetchall()
 
-        return jsonify([
-            dict(row, details=json.loads(row['details_json']))
-            for row in rows
-        ])
+        result = []
+
+        for row in rows:
+            item = dict(row)
+            item['details'] = json.loads(item.pop('details_json') or '[]')
+            result.append(item)
+
+        return jsonify(result)
 
     @app.get('/api/submissions/<int:submission_id>/status')
     def submission_status(submission_id):
@@ -328,8 +396,9 @@ def create_app(test_config=None):
 
         with connect(app.config['DATABASE_PATH']) as db:
             row = db.execute(
-                '''SELECT id, problem_id, verdict, score, max_score,
-                          details_json, created_at
+                '''SELECT id, problem_id, language_id, verdict,
+                          score, max_score, details_json, created_at,
+                          contest_id
                    FROM submissions
                    WHERE id=? AND user_id=?''',
                 (submission_id, user['id'])
@@ -339,7 +408,7 @@ def create_app(test_config=None):
             return jsonify(error='Không tìm thấy bài nộp.'), 404
 
         result = dict(row)
-        result['details'] = json.loads(result.pop('details_json'))
+        result['details'] = json.loads(result.pop('details_json') or '[]')
 
         return jsonify(result)
 
@@ -396,6 +465,380 @@ def create_app(test_config=None):
             message='Đã nhận bài. Đang chấm...'
         ), 202
 
+    # ==================== CONTEST PAGES ====================
+
+    @app.get('/contests')
+    def contests_page():
+        return render_template('contests.html')
+
+    @app.get('/contests/<int:contest_id>')
+    def contest_page(contest_id):
+        return render_template(
+            'contest_detail.html',
+            contest_id=contest_id
+        )
+
+    # ==================== CONTEST PUBLIC API ====================
+
+    @app.get('/api/contests')
+    def api_contests():
+        user = current_user()
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            if user and user['is_admin']:
+                rows = db.execute(
+                    'SELECT * FROM contests ORDER BY start_time DESC, id DESC'
+                ).fetchall()
+            else:
+                rows = db.execute(
+                    '''SELECT * FROM contests
+                       WHERE is_visible=1
+                       ORDER BY start_time DESC, id DESC'''
+                ).fetchall()
+
+        result = []
+
+        for row in rows:
+            item = dict(row)
+            item['is_visible'] = bool(item['is_visible'])
+            item['state'] = contest_state(item)
+            result.append(item)
+
+        return jsonify(result)
+
+    @app.get('/api/contests/<int:contest_id>')
+    def api_contest_detail(contest_id):
+        user = current_user()
+        allow_hidden = bool(user and user['is_admin'])
+        item = get_contest_data(contest_id, allow_hidden)
+
+        if not item:
+            return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+        return jsonify(item)
+
+    @app.get('/api/contests/<int:contest_id>/leaderboard')
+    def contest_leaderboard(contest_id):
+        user = current_user()
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            contest = db.execute(
+                'SELECT is_visible FROM contests WHERE id=?',
+                (contest_id,)
+            ).fetchone()
+
+            if not contest:
+                return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+            if not contest['is_visible'] and not (
+                user and user['is_admin']
+            ):
+                return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+            rows = db.execute(
+                '''SELECT u.username,
+                          COALESCE(SUM(best.score), 0) AS score,
+                          COUNT(CASE WHEN best.solved=1 THEN 1 END) AS solved
+                   FROM users u
+                   LEFT JOIN (
+                       SELECT user_id, problem_id,
+                              MAX(score) AS score,
+                              MAX(CASE WHEN verdict='Accepted'
+                                       THEN 1 ELSE 0 END) AS solved
+                       FROM submissions
+                       WHERE contest_id=?
+                         AND verdict NOT IN
+                             ('Queued', 'Processing', 'Judge Unavailable')
+                       GROUP BY user_id, problem_id
+                   ) best ON best.user_id=u.id
+                   WHERE u.approved=1
+                   GROUP BY u.id
+                   ORDER BY score DESC, solved DESC, u.username ASC''',
+                (contest_id,)
+            ).fetchall()
+
+        return jsonify([dict(row) for row in rows])
+
+    # ==================== CONTEST SUBMISSION ====================
+
+    @app.post('/api/contests/<int:contest_id>/submit')
+    def contest_submit(contest_id):
+        user = current_user()
+
+        if not user:
+            return jsonify(error='Đăng nhập trước khi nộp bài.'), 401
+
+        d = request.get_json(silent=True) or {}
+        pid = str(d.get('problem_id', ''))
+        code = d.get('source_code', '')
+        language = d.get('language_id', 54)
+
+        if not isinstance(code, str) or not code.strip() or len(code) > 100000:
+            return jsonify(error='Mã nguồn trống hoặc vượt 100 KB.'), 400
+
+        try:
+            language = int(language)
+        except (ValueError, TypeError):
+            return jsonify(error='language_id không hợp lệ.'), 400
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            contest = db.execute(
+                '''SELECT * FROM contests
+                   WHERE id=? AND is_visible=1''',
+                (contest_id,)
+            ).fetchone()
+
+            if not contest:
+                return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+            member = db.execute(
+                '''SELECT 1 FROM contest_problems
+                   WHERE contest_id=? AND problem_id=?''',
+                (contest_id, pid)
+            ).fetchone()
+
+        now = datetime.now()
+        start = parse_contest_time(contest['start_time'])
+        end = parse_contest_time(contest['end_time'])
+
+        if now < start:
+            return jsonify(error='Cuộc thi chưa bắt đầu.'), 403
+
+        if now >= end:
+            return jsonify(error='Cuộc thi đã kết thúc.'), 403
+
+        if not member:
+            return jsonify(error='Bài này không thuộc cuộc thi.'), 403
+
+        p = next((x for x in problems() if x['id'] == pid), None)
+
+        if not p:
+            return jsonify(error='Không tìm thấy bài.'), 404
+
+        job_id, submission_id = enqueue(
+            app, user['id'], p, code, language,
+            contest_id=contest_id
+        )
+
+        return jsonify(
+            submission_id=submission_id,
+            job_id=job_id,
+            status='Queued',
+            message='Đã nhận bài thi. Đang chấm...'
+        ), 202
+
+    # ==================== ADMIN CONTEST API ====================
+
+    @app.get('/api/admin/contests')
+    def admin_list_contests():
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            rows = db.execute(
+                'SELECT * FROM contests ORDER BY id DESC'
+            ).fetchall()
+
+        result = []
+
+        for row in rows:
+            item = dict(row)
+            item['is_visible'] = bool(item['is_visible'])
+            item['state'] = contest_state(item)
+            result.append(item)
+
+        return jsonify(result)
+
+    @app.post('/api/admin/contests')
+    def admin_create_contest():
+        admin = admin_required()
+
+        if not admin:
+            return jsonify(error='Chỉ admin.'), 403
+
+        d = request.get_json(silent=True) or {}
+        title = str(d.get('title', '')).strip()
+        description = str(d.get('description', '')).strip()
+        problem_ids = d.get('problem_ids', [])
+        visible = bool(d.get('is_visible', True))
+
+        if not title or len(title) > 160:
+            return jsonify(error='Tên cuộc thi không hợp lệ.'), 400
+
+        if len(description) > 5000:
+            return jsonify(error='Mô tả tối đa 5000 ký tự.'), 400
+
+        if not isinstance(problem_ids, list) or not problem_ids:
+            return jsonify(error='Chọn ít nhất một bài thi.'), 400
+
+        try:
+            start = parse_contest_time(d.get('start_time'))
+            end = parse_contest_time(d.get('end_time'))
+
+            if end <= start:
+                return jsonify(
+                    error='Thời gian kết thúc phải sau thời gian bắt đầu.'
+                ), 400
+
+            bank = {p['id'] for p in problems()}
+            ids = []
+
+            for value in problem_ids:
+                pid = str(value)
+
+                if pid not in bank:
+                    return jsonify(error='Không tìm thấy bài: ' + pid), 400
+
+                if pid not in ids:
+                    ids.append(pid)
+
+        except (ValueError, TypeError) as exc:
+            return jsonify(error=str(exc)), 400
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            cur = db.execute(
+                '''INSERT INTO contests
+                   (title, description, start_time, end_time,
+                    is_visible, created_by)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
+                (
+                    title, description,
+                    start.isoformat(timespec='minutes'),
+                    end.isoformat(timespec='minutes'),
+                    int(visible), admin['id']
+                )
+            )
+
+            contest_id = cur.lastrowid
+
+            db.executemany(
+                '''INSERT INTO contest_problems
+                   (contest_id, problem_id, position)
+                   VALUES (?, ?, ?)''',
+                [
+                    (contest_id, pid, i)
+                    for i, pid in enumerate(ids)
+                ]
+            )
+
+        return jsonify(ok=True, id=contest_id), 201
+
+    @app.put('/api/admin/contests/<int:contest_id>')
+    def admin_update_contest(contest_id):
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        d = request.get_json(silent=True) or {}
+        title = str(d.get('title', '')).strip()
+        description = str(d.get('description', '')).strip()
+        problem_ids = d.get('problem_ids', [])
+        visible = bool(d.get('is_visible', True))
+
+        if not title or len(title) > 160:
+            return jsonify(error='Tên cuộc thi không hợp lệ.'), 400
+
+        if len(description) > 5000:
+            return jsonify(error='Mô tả tối đa 5000 ký tự.'), 400
+
+        if not isinstance(problem_ids, list) or not problem_ids:
+            return jsonify(error='Chọn ít nhất một bài thi.'), 400
+
+        try:
+            start = parse_contest_time(d.get('start_time'))
+            end = parse_contest_time(d.get('end_time'))
+
+            if end <= start:
+                return jsonify(
+                    error='Thời gian kết thúc phải sau thời gian bắt đầu.'
+                ), 400
+
+            bank = {p['id'] for p in problems()}
+            ids = []
+
+            for value in problem_ids:
+                pid = str(value)
+
+                if pid not in bank:
+                    return jsonify(error='Không tìm thấy bài: ' + pid), 400
+
+                if pid not in ids:
+                    ids.append(pid)
+
+        except (ValueError, TypeError) as exc:
+            return jsonify(error=str(exc)), 400
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            exists = db.execute(
+                'SELECT id FROM contests WHERE id=?',
+                (contest_id,)
+            ).fetchone()
+
+            if not exists:
+                return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+            db.execute(
+                '''UPDATE contests
+                   SET title=?, description=?, start_time=?,
+                       end_time=?, is_visible=?
+                   WHERE id=?''',
+                (
+                    title, description,
+                    start.isoformat(timespec='minutes'),
+                    end.isoformat(timespec='minutes'),
+                    int(visible), contest_id
+                )
+            )
+
+            db.execute(
+                'DELETE FROM contest_problems WHERE contest_id=?',
+                (contest_id,)
+            )
+
+            db.executemany(
+                '''INSERT INTO contest_problems
+                   (contest_id, problem_id, position)
+                   VALUES (?, ?, ?)''',
+                [
+                    (contest_id, pid, i)
+                    for i, pid in enumerate(ids)
+                ]
+            )
+
+        return jsonify(ok=True, id=contest_id)
+
+    @app.delete('/api/admin/contests/<int:contest_id>')
+    def admin_delete_contest(contest_id):
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            exists = db.execute(
+                'SELECT id FROM contests WHERE id=?',
+                (contest_id,)
+            ).fetchone()
+
+            if not exists:
+                return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+            submissions = db.execute(
+                'SELECT COUNT(*) AS n FROM submissions WHERE contest_id=?',
+                (contest_id,)
+            ).fetchone()['n']
+
+            if submissions:
+                return jsonify(
+                    error='Cuộc thi đã có bài nộp, không thể xóa.'
+                ), 409
+
+            db.execute(
+                'DELETE FROM contests WHERE id=?',
+                (contest_id,)
+            )
+
+        return jsonify(ok=True)
+
+    # ==================== ADMIN PROBLEM API ====================
+
     @app.get('/api/admin/problems')
     def admin_list():
         if not admin_required():
@@ -434,7 +877,10 @@ def create_app(test_config=None):
 
         try:
             old = problems()
-            idx = next((i for i, p in enumerate(old) if p['id'] == pid), None)
+            idx = next(
+                (i for i, p in enumerate(old) if p['id'] == pid),
+                None
+            )
 
             if idx is None:
                 return jsonify(error='Không tìm thấy bài.'), 404
