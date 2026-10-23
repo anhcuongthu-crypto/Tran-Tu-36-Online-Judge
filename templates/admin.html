@@ -1,1 +1,243 @@
-{% extends 'base.html' %}{% block title %}Quản trị — OJ Studio{% endblock %}{% block content %}<section class="hero admin-hero"><span class="eyebrow">ADMIN CONTROL CENTER</span><h1>Trung tâm quản trị</h1><p>Quản lý yêu cầu đăng ký, xem ngân hàng đề và kiểm soát quyền truy cập.</p></section><section class="glass-card"><div class="section-heading"><div><h2>Yêu cầu tài khoản</h2><p class="muted">Chỉ duyệt học sinh đã liên hệ Trần Tuấn Tú.</p></div><button id="reload-users" class="button button-glass">↻ Tải lại</button></div><div id="admin-users">Đang tải...</div></section><section class="glass-card"><div class="section-heading"><div><h2>Ngân hàng đề</h2><p class="muted">Bài hiện có trong tệp problems.json.</p></div><a class="button button-primary" href="/">Mở danh sách bài ↗</a></div><div id="admin-problem-count">Đang tải...</div><p class="muted tiny">API thêm/sửa/xóa bài: /api/admin/problems. Kiểm tra JSON và toàn bộ test trước khi cập nhật ngân hàng đề.</p></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}Quản trị — OJ Studio{% endblock %}
+
+{% block content %}
+<section class="hero admin-hero">
+  <span class="eyebrow">ADMIN CONTROL CENTER</span>
+  <h1>Trung tâm quản trị</h1>
+  <p>Quản lý tài khoản và ngân hàng đề.</p>
+</section>
+
+<section class="glass-card">
+  <div class="section-heading">
+    <div>
+      <h2>Yêu cầu tài khoản</h2>
+      <p class="muted">Chỉ duyệt học sinh đã liên hệ Trần Tuấn Tú.</p>
+    </div>
+    <button id="reload-users" class="button button-glass">↻ Tải lại</button>
+  </div>
+  <div id="admin-users">Đang tải...</div>
+</section>
+
+<section class="glass-card">
+  <div class="section-heading">
+    <div>
+      <h2>Ngân hàng đề</h2>
+      <p class="muted">Thêm, sửa và xoá bài tập.</p>
+    </div>
+    <a class="button button-primary" href="/">Mở danh sách bài ↗</a>
+  </div>
+
+  <div id="admin-problem-count">Đang tải...</div>
+  <div id="problem-list">Đang tải danh sách bài...</div>
+</section>
+
+<section class="glass-card" id="problem-editor">
+  <h2 id="editor-title">Thêm bài mới</h2>
+  <p class="muted">
+    Nhập toàn bộ dữ liệu bài theo định dạng JSON.
+    Tổng điểm subtasks phải bằng total_score và mỗi subtask cần ít nhất một test.
+  </p>
+
+  <form id="problem-form">
+    <label for="problem-json">Dữ liệu bài tập (JSON)</label>
+    <textarea
+      id="problem-json"
+      rows="22"
+      required
+      spellcheck="false"
+      style="width:100%;font-family:monospace"
+      placeholder='{"id":"BAI01","title":"Tên bài","statement":"Đề bài","total_score":10,"subtasks":[...]}'
+    ></textarea>
+
+    <p id="problem-message" role="status" aria-live="polite"></p>
+
+    <button type="submit" class="button button-primary" id="save-problem">
+      Thêm bài
+    </button>
+    <button type="button" class="button button-glass" id="cancel-edit">
+      Huỷ sửa
+    </button>
+  </form>
+</section>
+
+<script>
+(() => {
+  const list = document.getElementById('problem-list');
+  const count = document.getElementById('admin-problem-count');
+  const form = document.getElementById('problem-form');
+  const editor = document.getElementById('problem-json');
+  const message = document.getElementById('problem-message');
+  const title = document.getElementById('editor-title');
+  const saveButton = document.getElementById('save-problem');
+  const cancelButton = document.getElementById('cancel-edit');
+
+  let editingId = null;
+
+  async function api(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Lỗi HTTP ${response.status}`);
+    }
+
+    return data;
+  }
+
+  function showMessage(text, error = false) {
+    message.textContent = text;
+    message.style.color = error ? '#dc2626' : '';
+  }
+
+  function resetEditor() {
+    editingId = null;
+    form.reset();
+    title.textContent = 'Thêm bài mới';
+    saveButton.textContent = 'Thêm bài';
+    cancelButton.hidden = true;
+    showMessage('');
+  }
+
+  function makeButton(text, className, handler) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = text;
+    button.addEventListener('click', handler);
+    return button;
+  }
+
+  async function loadProblems() {
+    list.textContent = 'Đang tải danh sách bài...';
+
+    try {
+      const problems = await api('/api/admin/problems');
+
+      count.textContent = `Tổng số bài: ${problems.length}`;
+      list.replaceChildren();
+
+      if (!problems.length) {
+        list.textContent = 'Chưa có bài tập nào.';
+        return;
+      }
+
+      for (const problem of problems) {
+        const row = document.createElement('div');
+        row.className = 'section-heading';
+        row.style.marginTop = '16px';
+
+        const info = document.createElement('div');
+        const heading = document.createElement('h3');
+        heading.textContent = `${problem.id} — ${problem.title}`;
+
+        const detail = document.createElement('p');
+        detail.className = 'muted';
+        detail.textContent =
+          `${problem.total_score} điểm · ${problem.subtasks.length} subtasks`;
+
+        info.append(heading, detail);
+
+        const actions = document.createElement('div');
+        actions.append(
+          makeButton('Sửa', 'button button-glass', () => {
+            editingId = problem.id;
+            editor.value = JSON.stringify(problem, null, 2);
+            title.textContent = `Sửa bài ${problem.id}`;
+            saveButton.textContent = 'Lưu thay đổi';
+            cancelButton.hidden = false;
+            showMessage('');
+            document.getElementById('problem-editor').scrollIntoView({
+              behavior: 'smooth'
+            });
+          }),
+          makeButton('Xoá', 'button button-glass', async () => {
+            if (!confirm(`Xoá bài "${problem.id} — ${problem.title}"?`)) {
+              return;
+            }
+
+            try {
+              await api(
+                `/api/admin/problems/${encodeURIComponent(problem.id)}`,
+                { method: 'DELETE' }
+              );
+
+              if (editingId === problem.id) resetEditor();
+              await loadProblems();
+            } catch (error) {
+              alert(error.message);
+            }
+          })
+        );
+
+        row.append(info, actions);
+        list.append(row);
+      }
+    } catch (error) {
+      list.textContent = error.message;
+      count.textContent = 'Không tải được ngân hàng đề.';
+    }
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    let problem;
+
+    try {
+      problem = JSON.parse(editor.value);
+    } catch {
+      showMessage('JSON không hợp lệ. Kiểm tra dấu ngoặc và dấu phẩy.', true);
+      return;
+    }
+
+    if (!problem || typeof problem !== 'object' || Array.isArray(problem)) {
+      showMessage('Dữ liệu phải là một đối tượng JSON.', true);
+      return;
+    }
+
+    if (editingId !== null) {
+      problem.id = editingId;
+    }
+
+    saveButton.disabled = true;
+    showMessage('Đang lưu...');
+
+    try {
+      const isEditing = editingId !== null;
+
+      await api(
+        isEditing
+          ? `/api/admin/problems/${encodeURIComponent(editingId)}`
+          : '/api/admin/problems',
+        {
+          method: isEditing ? 'PUT' : 'POST',
+          body: JSON.stringify(problem)
+        }
+      );
+
+      resetEditor();
+      await loadProblems();
+      showMessage(isEditing ? 'Đã cập nhật bài.' : 'Đã thêm bài.');
+    } catch (error) {
+      showMessage(error.message, true);
+    } finally {
+      saveButton.disabled = false;
+    }
+  });
+
+  cancelButton.addEventListener('click', resetEditor);
+
+  loadProblems();
+})();
+</script>
+{% endblock %}
