@@ -52,15 +52,15 @@ def _get_test_scores(st):
     ]
 
 
-def enqueue(app, user_id, problem, code, language):
+def enqueue(app, user_id, problem, code, language, contest_id=None):
     job_id = uuid.uuid4().hex
 
     with connect(app.config['DATABASE_PATH']) as db:
         cur = db.execute(
             '''INSERT INTO submissions
             (user_id, problem_id, language_id, source_code,
-             verdict, score, max_score, details_json)
-            VALUES (?, ?, ?, ?, ?, 0, ?, ?)''',
+             verdict, score, max_score, details_json, contest_id)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)''',
             (
                 user_id,
                 problem['id'],
@@ -68,7 +68,8 @@ def enqueue(app, user_id, problem, code, language):
                 code,
                 'Queued',
                 problem['total_score'],
-                '[]'
+                '[]',
+                contest_id
             )
         )
         submission_id = cur.lastrowid
@@ -103,7 +104,7 @@ def get_job(app, job_id, user_id):
     with connect(app.config['DATABASE_PATH']) as db:
         row = db.execute(
             '''SELECT id, problem_id, verdict, score, max_score,
-                      details_json, created_at
+                      details_json, created_at, contest_id
                FROM submissions
                WHERE id=? AND user_id=?''',
             (job['submission_id'], user_id)
@@ -233,8 +234,6 @@ def _run_job(app, job_id, submission_id,
                 flush=True
             )
 
-            # Không chấm các subtask sau khi lỗi biên dịch
-            # hoặc Judge0 gặp lỗi hệ thống.
             if compile_error or judge_error:
                 break
 
@@ -243,32 +242,24 @@ def _run_job(app, job_id, submission_id,
         if compile_error:
             verdict = 'Error'
             score = 0
-
         elif judge_error:
             verdict = 'Judge Unavailable'
-
         elif score >= total_score:
             verdict = 'Accepted'
             score = total_score
-
         elif score > 0:
             verdict = 'Partially Accepted'
-
         elif any(s == 'Wrong Answer' for s in statuses):
             verdict = 'Wrong Answer'
-
         elif any(s == 'Time Limit Exceeded' for s in statuses):
             verdict = 'Time Limit Exceeded'
-
         elif any(s == 'Memory Limit Exceeded' for s in statuses):
             verdict = 'Memory Limit Exceeded'
-
         elif any(
             isinstance(s, str) and s.startswith('Runtime Error')
             for s in statuses
         ):
             verdict = 'Runtime Error'
-
         else:
             verdict = 'Wrong Answer'
 
@@ -310,14 +301,19 @@ def _run_job(app, job_id, submission_id,
                 )
             )
 
-            db.execute(
-                '''INSERT INTO solves(user_id, problem_id, best_score)
-                   VALUES (?, ?, ?)
-                   ON CONFLICT(user_id, problem_id)
-                   DO UPDATE SET best_score =
-                       MAX(best_score, excluded.best_score)''',
-                (user_id, problem['id'], score)
-            )
+            # Chỉ cập nhật thành tích luyện tập cho bài nộp
+            # không thuộc cuộc thi.
+            if _get_contest_id(
+                app, submission_id, user_id
+            ) is None:
+                db.execute(
+                    '''INSERT INTO solves(user_id, problem_id, best_score)
+                       VALUES (?, ?, ?)
+                       ON CONFLICT(user_id, problem_id)
+                       DO UPDATE SET best_score =
+                           MAX(best_score, excluded.best_score)''',
+                    (user_id, problem['id'], score)
+                )
 
     except Exception as exc:
         print(
@@ -328,3 +324,15 @@ def _run_job(app, job_id, submission_id,
     with _lock:
         if job_id in _jobs:
             _jobs[job_id]['status'] = 'Finished'
+
+
+def _get_contest_id(app, submission_id, user_id):
+    with connect(app.config['DATABASE_PATH']) as db:
+        row = db.execute(
+            '''SELECT contest_id
+               FROM submissions
+               WHERE id=? AND user_id=?''',
+            (submission_id, user_id)
+        ).fetchone()
+
+    return row['contest_id'] if row else None
