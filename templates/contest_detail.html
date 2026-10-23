@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chi tiết Contest | TranTu OJ</title>
+<style>
+:root{--bg:#0b1020;--panel:#131c30;--line:#27344d;--text:#edf2ff;--muted:#9eacc5;--primary:#8b7cff;--green:#34d399}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px Arial,sans-serif}
+a{color:inherit;text-decoration:none}
+.nav{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(5%,calc((100% - 1150px)/2))}
+.brand{font-size:20px;font-weight:800;color:#a99dff}
+.nav a:last-child{color:var(--muted)}
+.wrap{max-width:1150px;margin:35px auto;padding:0 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:20px}
+h1{font-size:30px;margin:12px 0}
+h2{font-size:20px}
+.muted{color:var(--muted);line-height:1.7}
+.badge{display:inline-block;padding:6px 10px;border-radius:30px;background:#26344b;font-size:12px}
+.running{background:#123e36;color:#6ee7b7}
+.upcoming{background:#3b2e15;color:#fcd34d}
+.ended{background:#30364a;color:#b7c2d6}
+.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:20px}
+.problem{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:15px 0}
+.problem:last-child{border-bottom:0}
+.problem h3{margin:0 0 6px}
+.score{color:#c3baff;white-space:nowrap}
+button,.btn{display:inline-block;border:0;border-radius:9px;padding:11px 15px;background:var(--primary);color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{width:100%;padding:12px;background:#0b1222;color:var(--text);border:1px solid var(--line);border-radius:9px;margin:7px 0 14px}
+textarea{min-height:180px;resize:vertical;font-family:Consolas,monospace}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:13px}
+#message{white-space:pre-wrap;line-height:1.6;margin-top:12px}
+.good{color:var(--green)}
+.error{color:#fca5a5}
+.empty{padding:20px;color:var(--muted);text-align:center}
+@media(max-width:750px){.layout{grid-template-columns:1fr}.panel{padding:17px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="/">TranTu OJ</a>
+  <a href="/contests">← Danh sách Contest</a>
+</header>
+
+<main class="wrap">
+  <section class="panel" id="contestHeader">
+    <div class="muted">Đang tải cuộc thi...</div>
+  </section>
+
+  <div class="layout">
+    <div>
+      <section class="panel">
+        <h2>Danh sách bài thi</h2>
+        <div id="problems"><div class="empty">Đang tải bài thi...</div></div>
+      </section>
+
+      <section class="panel">
+        <h2>Nộp bài</h2>
+        <p class="muted">Chọn bài, ngôn ngữ và dán mã nguồn của mày.</p>
+
+        <form id="submitForm">
+          <label for="problemId">Bài thi</label>
+          <select id="problemId" required></select>
+
+          <label for="language">Ngôn ngữ</label>
+          <select id="language">
+            <option value="54">C++ (GCC 9.2.0)</option>
+            <option value="50">C (GCC 9.2.0)</option>
+            <option value="71">Python 3</option>
+          </select>
+
+          <label for="sourceCode">Mã nguồn</label>
+          <textarea id="sourceCode" required maxlength="100000"
+            placeholder="#include &lt;bits/stdc++.h&gt;&#10;using namespace std;&#10;int main(){&#10;    return 0;&#10;}"></textarea>
+
+          <button id="submitButton" type="submit">Nộp bài</button>
+          <div id="message"></div>
+        </form>
+      </section>
+    </div>
+
+    <aside>
+      <section class="panel">
+        <h2>Thông tin cuộc thi</h2>
+        <div id="info" class="muted">Đang tải...</div>
+      </section>
+
+      <section class="panel">
+        <h2>Bảng xếp hạng</h2>
+        <div id="leaderboard" class="empty">Đang tải...</div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script>
+const CONTEST_ID = Number(location.pathname.split('/').filter(Boolean).pop());
+const $ = id => document.getElementById(id);
+
+let contest = null;
+let problemList = [];
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  })[c]);
+}
+
+function formatDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString('vi-VN');
+}
+
+const stateNames = {
+  running: 'Đang diễn ra',
+  upcoming: 'Sắp diễn ra',
+  ended: 'Đã kết thúc'
+};
+
+async function loadContest() {
+  const r = await fetch(`/api/contests/${CONTEST_ID}`);
+  const data = await r.json();
+
+  if (!r.ok) throw new Error(data.error || 'Không tải được cuộc thi.');
+
+  contest = data;
+  problemList = data.problems || [];
+
+  $('contestHeader').innerHTML = `
+    <span class="badge ${escapeHTML(data.state)}">${escapeHTML(stateNames[data.state] || data.state)}</span>
+    <h1>${escapeHTML(data.title)}</h1>
+    <p class="muted">${escapeHTML(data.description || 'Chưa có mô tả.')}</p>
+  `;
+
+  $('info').innerHTML = `
+    <p><strong>Bắt đầu</strong><br>${escapeHTML(formatDate(data.start_time))}</p>
+    <p><strong>Kết thúc</strong><br>${escapeHTML(formatDate(data.end_time))}</p>
+    <p><strong>Số bài</strong><br>${problemList.length}</p>
+    <p><strong>Trạng thái</strong><br>${escapeHTML(stateNames[data.state] || data.state)}</p>
+  `;
+
+  if (!problemList.length) {
+    $('problems').innerHTML = '<div class="empty">Cuộc thi chưa có bài nào.</div>';
+    $('problemId').innerHTML = '';
+    $('submitButton').disabled = true;
+    return;
+  }
+
+  $('problems').innerHTML = problemList.map((p, i) => `
+    <div class="problem">
+      <div>
+        <h3><a href="#" data-problem="${escapeHTML(p.id)}">${i + 1}. ${escapeHTML(p.title)}</a></h3>
+        <div class="muted">Mã bài: ${escapeHTML(p.id)}</div>
+      </div>
+      <span class="score">${Number(p.total_score) || 0} điểm</span>
+    </div>
+  `).join('');
+
+  $('problemId').innerHTML = problemList.map(p => `
+    <option value="${escapeHTML(p.id)}">${escapeHTML(p.id)} — ${escapeHTML(p.title)}</option>
+  `).join('');
+
+  const canSubmit = data.state === 'running';
+  $('submitButton').disabled = !canSubmit;
+
+  if (!canSubmit) {
+    $('message').textContent = data.state === 'upcoming'
+      ? 'Cuộc thi chưa bắt đầu, hiện chưa thể nộp bài.'
+      : 'Cuộc thi đã kết thúc, hiện chưa thể nộp bài.';
+  }
+
+  $('problems').querySelectorAll('[data-problem]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      $('problemId').value = link.dataset.problem;
+      $('sourceCode').focus();
+    });
+  });
+}
+
+async function loadLeaderboard() {
+  const box = $('leaderboard');
+
+  try {
+    const r = await fetch(`/api/contests/${CONTEST_ID}/leaderboard`);
+    const data = await r.json();
+
+    if (!r.ok) throw new Error(data.error || 'Không tải được bảng xếp hạng.');
+
+    if (!data.length) {
+      box.innerHTML = '<div class="empty">Chưa có kết quả.</div>';
+      return;
+    }
+
+    box.innerHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Thí sinh</th><th>Điểm</th><th>AC</th></tr></thead>
+        <tbody>
+          ${data.map((x, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${escapeHTML(x.username)}</td>
+              <td>${Number(x.score) || 0}</td>
+              <td>${Number(x.solved) || 0}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) {
+    box.textContent = e.message;
+  }
+}
+
+$('submitForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  if (!contest || contest.state !== 'running') {
+    $('message').textContent = 'Cuộc thi hiện không nhận bài nộp.';
+    return;
+  }
+
+  const source_code = $('sourceCode').value;
+
+  if (!source_code.trim()) {
+    $('message').textContent = 'Mã nguồn không được để trống.';
+    return;
+  }
+
+  $('submitButton').disabled = true;
+  $('message').className = '';
+  $('message').textContent = 'Đang gửi bài...';
+
+  try {
+    const r = await fetch(`/api/contests/${CONTEST_ID}/submit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        problem_id: $('problemId').value,
+        language_id: Number($('language').value),
+        source_code
+      })
+    });
+
+    const data = await r.json();
+
+    if (!r.ok) {
+      if (r.status === 401) {
+        throw new Error('Mày cần đăng nhập trước khi nộp bài.');
+      }
+      throw new Error(data.error || 'Nộp bài thất bại.');
+    }
+
+    $('message').className = 'good';
+    $('message').textContent =
+      `Đã gửi bài thành công!\nSubmission ID: ${data.submission_id}\nTrạng thái: ${data.status}`;
+
+    setTimeout(loadLeaderboard, 2500);
+  } catch (err) {
+    $('message').className = 'error';
+    $('message').textContent = err.message;
+  } finally {
+    $('submitButton').disabled = contest.state !== 'running';
+  }
+});
+
+(async function init() {
+  try {
+    await loadContest();
+    await loadLeaderboard();
+  } catch (e) {
+    $('contestHeader').innerHTML =
+      `<div class="error">${escapeHTML(e.message)}</div>`;
+  }
+})();
+</script>
+</body>
+</html>
