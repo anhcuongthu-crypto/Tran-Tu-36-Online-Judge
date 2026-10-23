@@ -1,4 +1,3 @@
-
 import time
 import requests
 
@@ -37,7 +36,6 @@ class Judge0:
 
     def _format_result(self, data):
         status_data = data.get('status') or {}
-
         status = status_data.get('description')
 
         if not status:
@@ -72,6 +70,12 @@ class Judge0:
             'message': data.get('message')
         }
 
+    def _get_error_text(self, response):
+        try:
+            return response.text[:3000]
+        except Exception:
+            return 'Không đọc được nội dung lỗi từ Judge0.'
+
     def run(self, source, language_id, stdin, expected,
             time_limit=1.0, memory_limit=256000):
         headers = self._headers()
@@ -85,11 +89,9 @@ class Judge0:
             memory_limit
         )
 
-        url = self.base_url + '/submissions'
-
         try:
             r = self.session.post(
-                url,
+                self.base_url + '/submissions',
                 params={
                     'base64_encoded': 'false',
                     'wait': 'false'
@@ -104,9 +106,11 @@ class Judge0:
                 flush=True
             )
 
-            if r.status_code in (429, 502, 503, 504):
-                raise JudgeError(
-                    f'Judge0 HTTP {r.status_code}: {r.text[:500]}'
+            if r.status_code != 201 and not r.ok:
+                print(
+                    'Judge0 POST response:',
+                    self._get_error_text(r),
+                    flush=True
                 )
 
             r.raise_for_status()
@@ -134,10 +138,18 @@ class Judge0:
                     headers=headers,
                     timeout=(5, 10)
                 )
+
+                if not q.ok:
+                    print(
+                        'Judge0 poll HTTP:',
+                        q.status_code,
+                        self._get_error_text(q),
+                        flush=True
+                    )
+
                 q.raise_for_status()
 
-                data = q.json()
-                result = self._format_result(data)
+                result = self._format_result(q.json())
                 last_status = result['status']
 
                 print(
@@ -149,7 +161,10 @@ class Judge0:
                     return result
 
             except requests.RequestException as e:
-                print('Judge0 poll error:', str(e), flush=True)
+                print(
+                    'Judge0 poll error:', str(e),
+                    flush=True
+                )
 
             delay = min(delay * 1.5, 3.0)
 
@@ -167,7 +182,6 @@ class Judge0:
             return []
 
         headers = self._headers()
-
         submissions = []
 
         for test in tests:
@@ -191,6 +205,19 @@ class Judge0:
                 timeout=(5, 30)
             )
 
+            print(
+                'Judge0 batch POST status:',
+                r.status_code,
+                flush=True
+            )
+
+            if not r.ok:
+                print(
+                    'Judge0 batch POST response:',
+                    self._get_error_text(r),
+                    flush=True
+                )
+
             r.raise_for_status()
             data = r.json()
 
@@ -201,7 +228,8 @@ class Judge0:
 
         if not isinstance(data, list):
             raise JudgeError(
-                'Judge0 batch không trả về danh sách token.'
+                'Judge0 batch không trả về danh sách token: '
+                + str(data)[:1000]
             )
 
         tokens = [item.get('token') for item in data]
@@ -232,13 +260,47 @@ class Judge0:
                     timeout=(5, 15)
                 )
 
+                if not q.ok:
+                    print(
+                        'Judge0 batch HTTP:',
+                        q.status_code,
+                        flush=True
+                    )
+                    print(
+                        'Judge0 batch response:',
+                        self._get_error_text(q),
+                        flush=True
+                    )
+
                 q.raise_for_status()
                 response = q.json()
-                items = response.get('submissions', [])
+
+                if not isinstance(response, dict):
+                    print(
+                        'Judge0 batch response format:',
+                        str(response)[:1000],
+                        flush=True
+                    )
+                    raise JudgeError(
+                        'Phản hồi truy vấn batch không phải object.'
+                    )
+
+                items = response.get('submissions')
+
+                if not isinstance(items, list):
+                    print(
+                        'Judge0 batch thiếu submissions:',
+                        str(response)[:1000],
+                        flush=True
+                    )
+                    raise JudgeError(
+                        'Judge0 không trả danh sách submissions.'
+                    )
 
                 by_token = {
                     item.get('token'): item
                     for item in items
+                    if isinstance(item, dict)
                 }
 
                 for i in list(pending):
@@ -249,6 +311,14 @@ class Judge0:
 
                     result = self._format_result(item)
                     status = result['status']
+
+                    print(
+                        'Judge0 batch test',
+                        i + 1,
+                        'status:',
+                        status,
+                        flush=True
+                    )
 
                     if status not in ('In Queue', 'Processing'):
                         results[i] = result
@@ -261,12 +331,21 @@ class Judge0:
                     flush=True
                 )
 
+            except JudgeError as e:
+                print(
+                    'Judge0 batch response error:',
+                    str(e),
+                    flush=True
+                )
+
             delay = min(delay * 1.5, 2.0)
 
         for i in pending:
             results[i] = {
                 'status': 'Judge Timeout',
-                'message': 'Hết thời gian chờ kết quả từ Judge0.'
+                'message': (
+                    'Hết thời gian chờ kết quả từ Judge0.'
+                )
             }
 
         return results
