@@ -35,8 +35,13 @@ class Judge0:
                 headers=headers,
                 timeout=(3, 8)
             )
+            print("Judge0 POST status:", r.status_code, flush=True)
+            print("Judge0 POST body:", r.text[:500], flush=True)
+
             r.raise_for_status()
             token = r.json().get('token')
+            print("Judge0 token received:", bool(token), flush=True)
+
 
             if not token:
                 raise JudgeError('Judge0 không trả token.')
