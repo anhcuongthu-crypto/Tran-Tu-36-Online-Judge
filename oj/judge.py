@@ -2,8 +2,10 @@
 import time
 import requests
 
+
 class JudgeError(RuntimeError):
     pass
+
 
 class Judge0:
     def __init__(self, base_url, api_key='', session=None):
@@ -24,57 +26,104 @@ class Judge0:
             'stdin': stdin,
             'expected_output': expected,
             'cpu_time_limit': float(time_limit),
-            'wall_time_limit': max(2.0, float(time_limit) * 3),
+            'wall_time_limit': min(
+                30.0, max(2.0, float(time_limit) * 3)
+            ),
             'memory_limit': int(memory_limit)
         }
 
-        try:
-            r = self.session.post(
-                self.base_url + '/submissions?base64_encoded=false&wait=false',
-                json=payload,
-                headers=headers,
-                timeout=(3, 8)
-            )
-            print("Judge0 POST status:", r.status_code, flush=True)
-            print("Judge0 POST body:", r.text[:500], flush=True)
+        url = (
+            self.base_url
+            + '/submissions?base64_encoded=false&wait=false'
+        )
 
-            r.raise_for_status()
-            token = r.json().get('token')
-            print("Judge0 token received:", bool(token), flush=True)
+        token = None
+        last_error = None
 
-
-            if not token:
-                raise JudgeError('Judge0 không trả token.')
-
-            deadline = time.monotonic() + 20
-
-            while time.monotonic() < deadline:
-                time.sleep(0.5)
-
-                try:
-                    q = self.session.get(
-                        self.base_url + '/submissions/' + token
-                        + '?base64_encoded=false',
-                        headers=headers,
-                        timeout=(3, 5)
-                    )
-                    q.raise_for_status()
-                    data = q.json()
-
-                except requests.RequestException as e:
-                    print(
-                        f"Judge0 poll error: {type(e).__name__}: {e}",
-                        flush=True
-                    )
-                    continue
-
-                status = (data.get('status') or {}).get(
-                    'description', 'Unknown'
+        for attempt in range(3):
+            try:
+                r = self.session.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                    timeout=(5, 15)
                 )
 
-                if status not in ('In Queue', 'Processing'):
+                print(
+                    'Judge0 POST status:',
+                    r.status_code,
+                    flush=True
+                )
+
+                if r.status_code in (502, 503, 504, 429):
+                    last_error = (
+                        f'Judge0 HTTP {r.status_code}: {r.text[:300]}'
+                    )
+                    if attempt < 2:
+                        time.sleep(2 ** attempt)
+                        continue
+                    raise JudgeError(last_error)
+
+                r.raise_for_status()
+                token = r.json().get('token')
+
+                if token:
+                    print(
+                        'Judge0 token received: True',
+                        flush=True
+                    )
+                    break
+
+                raise JudgeError('Judge0 không trả token.')
+
+            except requests.RequestException as e:
+                last_error = str(e)
+
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+                    continue
+
+                raise JudgeError(
+                    'Không kết nối được Judge0: ' + last_error
+                ) from e
+
+        if not token:
+            raise JudgeError(
+                last_error or 'Không tạo được submission.'
+            )
+
+        deadline = time.monotonic() + 60
+        delay = 0.5
+        last_status = 'Unknown'
+        last_poll_error = None
+
+        while time.monotonic() < deadline:
+            time.sleep(delay)
+
+            try:
+                q = self.session.get(
+                    self.base_url + '/submissions/' + token
+                    + '?base64_encoded=false',
+                    headers=headers,
+                    timeout=(5, 10)
+                )
+                q.raise_for_status()
+                data = q.json()
+                last_poll_error = None
+
+                last_status = (
+                    data.get('status') or {}
+                ).get('description', 'Unknown')
+
+                print(
+                    'Judge0 poll status:',
+                    last_status,
+                    flush=True
+                )
+
+                if last_status not in ('In Queue', 'Processing'):
                     return {
-                        'status': status,
+                        'status': last_status,
                         'time': data.get('time'),
                         'memory': data.get('memory'),
                         'stdout': data.get('stdout'),
@@ -83,12 +132,25 @@ class Judge0:
                         'message': data.get('message')
                     }
 
-            return {
-                'status': 'Judge Timeout',
-                'message': 'Judge0 phản hồi quá chậm hoặc đang quá tải.'
-            }
+            except requests.RequestException as e:
+                last_poll_error = str(e)
+                print(
+                    'Judge0 poll error:',
+                    last_poll_error,
+                    flush=True
+                )
 
-        except requests.RequestException as e:
-            raise JudgeError(
-                'Không kết nối được Judge0: ' + str(e)
-            ) from e
+            delay = min(delay * 1.5, 3.0)
+
+        message = (
+            'Hết thời gian chờ kết quả từ Judge0. '
+            f'Trạng thái cuối: {last_status}.'
+        )
+
+        if last_poll_error:
+            message += ' Lỗi polling cuối: ' + last_poll_error[:300]
+
+        return {
+            'status': 'Judge Timeout',
+            'message': message
+        }
