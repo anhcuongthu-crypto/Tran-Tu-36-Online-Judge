@@ -15,7 +15,7 @@ class Judge0:
             r=self.session.post(self.base_url+'/submissions?base64_encoded=false&wait=false',json=payload,headers=headers,timeout=15)
             r.raise_for_status(); token=r.json().get('token')
             if not token: raise JudgeError('Judge0 không trả token.')
-            for _ in range(30):
+            for _ in range(60):
                 time.sleep(.5)
                 q=self.session.get(self.base_url+'/submissions/'+token+'?base64_encoded=false',headers=headers,timeout=15)
                 q.raise_for_status(); data=q.json(); status=(data.get('status') or {}).get('description','Unknown')
