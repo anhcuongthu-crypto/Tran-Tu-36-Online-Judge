@@ -14,6 +14,44 @@ _lock = threading.Lock()
 _jobs = {}
 
 
+def _is_compile_error(status):
+    return status in (
+        'Compilation Error',
+        'Compilation error',
+        'Compile Error',
+        'Error'
+    )
+
+
+def _is_judge_error(status):
+    return status in (
+        'Judge Unavailable',
+        'Judge Timeout',
+        'Internal Error',
+        'Unknown'
+    )
+
+
+def _get_test_scores(st):
+    tests = st.get('tests', [])
+    n = len(tests)
+
+    if n == 0:
+        return []
+
+    if all('score' in test for test in tests):
+        return [float(test['score']) for test in tests]
+
+    total = int(st.get('score', 0))
+    base = total // n
+    remainder = total - base * n
+
+    return [
+        base + (1 if i < remainder else 0)
+        for i in range(n)
+    ]
+
+
 def enqueue(app, user_id, problem, code, language):
     job_id = uuid.uuid4().hex
 
@@ -75,7 +113,9 @@ def get_job(app, job_id, user_id):
         return None
 
     result = dict(row)
-    result['details'] = json.loads(result.pop('details_json'))
+    result['details'] = json.loads(
+        result.pop('details_json') or '[]'
+    )
     result['status'] = job['status']
 
     return result
@@ -100,6 +140,8 @@ def _run_job(app, job_id, submission_id,
     score = 0
     details = []
     statuses = []
+    compile_error = False
+    judge_error = False
 
     try:
         judge = Judge0(
@@ -109,7 +151,8 @@ def _run_job(app, job_id, submission_id,
 
         for st in problem['subtasks']:
             subtask_started = time.perf_counter()
-            tests = st['tests']
+            tests = st.get('tests', [])
+            test_scores = _get_test_scores(st)
 
             batch_tests = [
                 {
@@ -128,11 +171,11 @@ def _run_job(app, job_id, submission_id,
             )
 
             sub_details = []
-            sub_ok = len(results) == len(tests)
+            subtask_score = 0
 
             for i, test in enumerate(tests):
                 if i < len(results):
-                    result = results[i]
+                    result = results[i] or {}
                 else:
                     result = {
                         'status': 'Judge Unavailable',
@@ -142,85 +185,99 @@ def _run_job(app, job_id, submission_id,
                 status = result.get('status', 'Unknown')
                 statuses.append(status)
 
+                max_test_score = test_scores[i]
+
+                if status == 'Accepted':
+                    earned = max_test_score
+                    subtask_score += earned
+                else:
+                    earned = 0
+
+                if _is_compile_error(status):
+                    compile_error = True
+
+                if _is_judge_error(status):
+                    judge_error = True
+
+                message = (
+                    result.get('compile_output')
+                    or result.get('stderr')
+                    or result.get('message')
+                    or ''
+                )
+
                 sub_details.append({
                     'test': i + 1,
                     'status': status,
+                    'score': earned,
+                    'max_score': max_test_score,
                     'time': result.get('time'),
                     'memory': result.get('memory'),
-                    'message': (
-                        result.get('compile_output')
-                        or result.get('stderr')
-                        or result.get('message')
-                        or ''
-                    )[:1000]
+                    'message': str(message)[:1000]
                 })
 
-                if status != 'Accepted':
-                    sub_ok = False
-
-            passed = (
-                sub_ok
-                and len(sub_details) == len(tests)
-                and len(tests) > 0
-            )
-
-            if passed:
-                score += int(st['score'])
+            score += subtask_score
 
             details.append({
-                'subtask': st['id'],
-                'name': st['name'],
-                'score': int(st['score']) if passed else 0,
+                'subtask': st.get('id'),
+                'name': st.get('name', ''),
+                'score': subtask_score,
+                'max_score': sum(test_scores),
                 'tests': sub_details
             })
 
             print(
                 f"[OJ SPEED] problem={problem['id']} "
-                f"subtask={st['id']} tests={len(tests)} "
+                f"subtask={st.get('id')} tests={len(tests)} "
                 f"elapsed={time.perf_counter() - subtask_started:.2f}s",
                 flush=True
             )
 
-            if any(
-                x['status'] in (
-                    'Compilation Error',
-                    'Compilation error'
-                )
-                for x in sub_details
-            ):
+            # Không chấm các subtask sau khi lỗi biên dịch
+            # hoặc Judge0 gặp lỗi hệ thống.
+            if compile_error or judge_error:
                 break
 
-        if score == int(problem['total_score']):
+        total_score = float(problem['total_score'])
+
+        if compile_error:
+            verdict = 'Error'
+            score = 0
+
+        elif judge_error:
+            verdict = 'Judge Unavailable'
+
+        elif score >= total_score:
             verdict = 'Accepted'
+            score = total_score
+
         elif score > 0:
             verdict = 'Partially Accepted'
-        elif any(
-            s in ('Compilation Error', 'Compilation error')
-            for s in statuses
-        ):
-            verdict = 'Compilation Error'
-        elif 'Judge Timeout' in statuses:
-            verdict = 'Judge Timeout'
-        elif statuses and all(s == 'Wrong Answer' for s in statuses):
+
+        elif any(s == 'Wrong Answer' for s in statuses):
             verdict = 'Wrong Answer'
+
         elif any(s == 'Time Limit Exceeded' for s in statuses):
             verdict = 'Time Limit Exceeded'
+
         elif any(s == 'Memory Limit Exceeded' for s in statuses):
             verdict = 'Memory Limit Exceeded'
-        elif any(s.startswith('Runtime Error') for s in statuses):
-            verdict = 'Runtime Error'
-        elif any(s == 'Judge Unavailable' for s in statuses):
-            verdict = 'Judge Unavailable'
-        else:
-            verdict = next(
-                (s for s in statuses if s != 'Accepted'),
-                'Wrong Answer'
-            )
 
-    except Exception as exc:
+        elif any(
+            isinstance(s, str) and s.startswith('Runtime Error')
+            for s in statuses
+        ):
+            verdict = 'Runtime Error'
+
+        else:
+            verdict = 'Wrong Answer'
+
+    except (JudgeError, Exception) as exc:
         verdict = 'Judge Unavailable'
+        score = 0
         details = [{
             'status': verdict,
+            'score': 0,
             'message': str(exc)[:1000]
         }]
 
@@ -255,8 +312,8 @@ def _run_job(app, job_id, submission_id,
 
             db.execute(
                 '''INSERT INTO solves(user_id, problem_id, best_score)
-                   VALUES(?,?,?)
-                   ON CONFLICT(user_id,problem_id)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(user_id, problem_id)
                    DO UPDATE SET best_score =
                        MAX(best_score, excluded.best_score)''',
                 (user_id, problem['id'], score)
