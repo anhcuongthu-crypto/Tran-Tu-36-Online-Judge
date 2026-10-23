@@ -49,15 +49,11 @@ class Judge0:
                     timeout=(5, 15)
                 )
 
-                print(
-                    'Judge0 POST status:',
-                    r.status_code,
-                    flush=True
-                )
+                print('Judge0 POST status:', r.status_code, flush=True)
 
                 if r.status_code in (502, 503, 504, 429):
                     last_error = (
-                        f'Judge0 HTTP {r.status_code}: {r.text[:300]}'
+                        f'Judge0 HTTP {r.status_code}: {r.text[:500]}'
                     )
                     if attempt < 2:
                         time.sleep(2 ** attempt)
@@ -67,30 +63,23 @@ class Judge0:
                 r.raise_for_status()
                 token = r.json().get('token')
 
-                if token:
-                    print(
-                        'Judge0 token received: True',
-                        flush=True
-                    )
-                    break
+                if not token:
+                    raise JudgeError('Judge0 không trả token.')
 
-                raise JudgeError('Judge0 không trả token.')
+                print('Judge0 token received: True', flush=True)
+                break
 
             except requests.RequestException as e:
                 last_error = str(e)
-
                 if attempt < 2:
                     time.sleep(2 ** attempt)
                     continue
-
                 raise JudgeError(
                     'Không kết nối được Judge0: ' + last_error
                 ) from e
 
         if not token:
-            raise JudgeError(
-                last_error or 'Không tạo được submission.'
-            )
+            raise JudgeError(last_error or 'Không tạo được submission.')
 
         deadline = time.monotonic() + 60
         delay = 0.5
@@ -107,6 +96,11 @@ class Judge0:
                     headers=headers,
                     timeout=(5, 10)
                 )
+
+                if q.status_code != 200:
+                    print('Judge0 GET status:', q.status_code, flush=True)
+                    print('Judge0 GET body:', q.text[:1500], flush=True)
+
                 q.raise_for_status()
                 data = q.json()
                 last_poll_error = None
@@ -115,11 +109,7 @@ class Judge0:
                     data.get('status') or {}
                 ).get('description', 'Unknown')
 
-                print(
-                    'Judge0 poll status:',
-                    last_status,
-                    flush=True
-                )
+                print('Judge0 poll status:', last_status, flush=True)
 
                 if last_status not in ('In Queue', 'Processing'):
                     return {
@@ -134,11 +124,7 @@ class Judge0:
 
             except requests.RequestException as e:
                 last_poll_error = str(e)
-                print(
-                    'Judge0 poll error:',
-                    last_poll_error,
-                    flush=True
-                )
+                print('Judge0 poll error:', str(e), flush=True)
 
             delay = min(delay * 1.5, 3.0)
 
