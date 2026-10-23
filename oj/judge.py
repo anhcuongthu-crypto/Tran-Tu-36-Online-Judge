@@ -1,5 +1,6 @@
 
-import time, requests
+import time
+import requests
 
 class JudgeError(RuntimeError):
     pass
@@ -10,7 +11,8 @@ class Judge0:
         self.api_key = api_key
         self.session = session or requests.Session()
 
-    def run(self, source, language_id, stdin, expected, time_limit=1.0, memory_limit=256000):
+    def run(self, source, language_id, stdin, expected,
+            time_limit=1.0, memory_limit=256000):
         headers = {'Content-Type': 'application/json'}
 
         if self.api_key:
@@ -46,17 +48,24 @@ class Judge0:
 
                 try:
                     q = self.session.get(
-                        self.base_url + '/submissions/' + token + '?base64_encoded=false',
+                        self.base_url + '/submissions/' + token
+                        + '?base64_encoded=false',
                         headers=headers,
                         timeout=(3, 5)
                     )
                     q.raise_for_status()
                     data = q.json()
 
-                except requests.RequestException:
+                except requests.RequestException as e:
+                    print(
+                        f"Judge0 poll error: {type(e).__name__}: {e}",
+                        flush=True
+                    )
                     continue
 
-                status = (data.get('status') or {}).get('description', 'Unknown')
+                status = (data.get('status') or {}).get(
+                    'description', 'Unknown'
+                )
 
                 if status not in ('In Queue', 'Processing'):
                     return {
@@ -75,4 +84,6 @@ class Judge0:
             }
 
         except requests.RequestException as e:
-            raise JudgeError('Không kết nối được Judge0: ' + str(e)) from e
+            raise JudgeError(
+                'Không kết nối được Judge0: ' + str(e)
+            ) from e
