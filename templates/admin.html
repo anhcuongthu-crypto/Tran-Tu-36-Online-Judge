@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý bài tập</title>
+    <title>Quản trị Online Judge</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,6 +40,10 @@
 
         .secondary {
             background: #64748b;
+        }
+
+        .success {
+            background: #15803d;
         }
 
         .panel {
@@ -82,6 +86,19 @@
             margin: 0;
         }
 
+        .message {
+            margin: 12px 0;
+            white-space: pre-wrap;
+        }
+
+        .error-message {
+            color: #dc2626;
+        }
+
+        .success-message {
+            color: #15803d;
+        }
+
         textarea {
             width: 100%;
             min-height: 300px;
@@ -93,17 +110,26 @@
             font-size: 14px;
         }
 
-        #problem-message {
-            margin: 12px 0;
-            white-space: pre-wrap;
-        }
-
         .toolbar {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 6px;
             margin-bottom: 12px;
+        }
+
+        .user-status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 6px;
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 13px;
+        }
+
+        .user-status.approved {
+            background: #dcfce7;
+            color: #166534;
         }
 
         @media (max-width: 600px) {
@@ -119,8 +145,28 @@
 </head>
 <body>
 
-    <h1>Quản lý bài tập</h1>
+    <h1>Quản trị Online Judge</h1>
 
+    <!-- QUẢN LÝ TÀI KHOẢN -->
+    <section class="panel">
+        <div class="section-heading">
+            <div>
+                <h2>Tài khoản học sinh</h2>
+                <p class="muted">
+                    Xem tài khoản và phê duyệt tài khoản đang chờ.
+                </p>
+            </div>
+
+            <button type="button" id="refresh-users" class="secondary">
+                Tải lại danh sách
+            </button>
+        </div>
+
+        <div id="user-message" class="message"></div>
+        <div id="users-list">Đang tải tài khoản...</div>
+    </section>
+
+    <!-- NGÂN HÀNG BÀI TẬP -->
     <section class="panel">
         <h2>Ngân hàng đề</h2>
 
@@ -143,6 +189,7 @@
         <div id="problem-list">Đang tải danh sách bài...</div>
     </section>
 
+    <!-- THÊM / SỬA BÀI TẬP -->
     <section class="panel">
         <h2 id="editor-title">Thêm bài tập</h2>
 
@@ -155,17 +202,24 @@
                 Dán toàn bộ JSON của một bài tập vào ô dưới đây.
             </p>
 
-            <textarea id="problem-json" required
-                placeholder='{"id":"BAI1","title":"Tên bài", ...}'></textarea>
+            <textarea
+                id="problem-json"
+                required
+                placeholder='{"id":"BAI1","title":"Tên bài", ...}'
+            ></textarea>
 
-            <div id="problem-message"></div>
+            <div id="problem-message" class="message"></div>
 
             <button type="submit" id="save-problem">
                 Thêm bài tập
             </button>
 
-            <button type="button" id="cancel-edit" class="secondary"
-                hidden>
+            <button
+                type="button"
+                id="cancel-edit"
+                class="secondary"
+                hidden
+            >
                 Hủy sửa
             </button>
         </form>
@@ -183,7 +237,13 @@
 
         const selectAllButton = document.getElementById('select-all');
         const deselectAllButton = document.getElementById('deselect-all');
-        const deleteSelectedButton = document.getElementById('delete-selected');
+        const deleteSelectedButton =
+            document.getElementById('delete-selected');
+
+        const usersList = document.getElementById('users-list');
+        const userMessage = document.getElementById('user-message');
+        const refreshUsersButton =
+            document.getElementById('refresh-users');
 
         let editingId = null;
         const selectedIds = new Set();
@@ -192,7 +252,9 @@
             const response = await fetch(url, {
                 ...options,
                 headers: {
-                    'Content-Type': 'application/json',
+                    ...(options.body !== undefined
+                        ? { 'Content-Type': 'application/json' }
+                        : {}),
                     ...(options.headers || {})
                 }
             });
@@ -208,7 +270,9 @@
 
             if (!response.ok) {
                 throw new Error(
-                    data.error || data.message || `Lỗi HTTP ${response.status}`
+                    data.error ||
+                    data.message ||
+                    `Lỗi HTTP ${response.status}`
                 );
             }
 
@@ -217,7 +281,14 @@
 
         function showMessage(text, isError = false) {
             message.textContent = text;
-            message.style.color = isError ? '#dc2626' : '#15803d';
+            message.className = 'message ' +
+                (isError ? 'error-message' : 'success-message');
+        }
+
+        function showUserMessage(text, isError = false) {
+            userMessage.textContent = text;
+            userMessage.className = 'message ' +
+                (isError ? 'error-message' : 'success-message');
         }
 
         function resetEditor() {
@@ -231,7 +302,6 @@
 
         function updateSelectedCount() {
             const n = selectedIds.size;
-
             deleteSelectedButton.textContent = `Xóa bài đã chọn (${n})`;
             deleteSelectedButton.disabled = n === 0;
         }
@@ -245,13 +315,119 @@
             return button;
         }
 
+        // =========================
+        // QUẢN LÝ TÀI KHOẢN
+        // =========================
+
+        async function loadUsers() {
+            usersList.textContent = 'Đang tải tài khoản...';
+            showUserMessage('');
+
+            refreshUsersButton.disabled = true;
+
+            try {
+                const users = await api('/api/admin/users');
+
+                usersList.replaceChildren();
+
+                if (!Array.isArray(users) || users.length === 0) {
+                    usersList.textContent =
+                        'Chưa có tài khoản học sinh.';
+                    return;
+                }
+
+                for (const user of users) {
+                    const row = document.createElement('div');
+                    row.className = 'section-heading';
+
+                    const info = document.createElement('div');
+                    info.className = 'problem-info';
+
+                    const textInfo = document.createElement('div');
+
+                    const heading = document.createElement('h3');
+                    heading.textContent =
+                        `${user.username} (#${user.id})`;
+
+                    const status = document.createElement('span');
+                    status.className = 'user-status' +
+                        (user.approved ? ' approved' : '');
+
+                    status.textContent = user.approved
+                        ? 'Đã phê duyệt'
+                        : 'Đang chờ phê duyệt';
+
+                    textInfo.append(heading, status);
+
+                    if (user.created_at) {
+                        const created = document.createElement('p');
+                        created.className = 'muted';
+                        created.style.marginTop = '6px';
+                        created.textContent =
+                            `Ngày tạo: ${user.created_at}`;
+                        textInfo.appendChild(created);
+                    }
+
+                    info.appendChild(textInfo);
+                    row.appendChild(info);
+
+                    if (!user.approved) {
+                        const approveButton = makeButton(
+                            'Phê duyệt',
+                            'success',
+                            async () => {
+                                if (approveButton.disabled) {
+                                    return;
+                                }
+
+                                approveButton.disabled = true;
+                                approveButton.textContent = 'Đang duyệt...';
+
+                                try {
+                                    await api(
+                                        `/api/admin/users/${user.id}/approve`,
+                                        { method: 'POST' }
+                                    );
+
+                                    showUserMessage(
+                                        `Đã phê duyệt tài khoản ${user.username}.`
+                                    );
+
+                                    await loadUsers();
+                                } catch (error) {
+                                    showUserMessage(error.message, true);
+                                    approveButton.disabled = false;
+                                    approveButton.textContent = 'Phê duyệt';
+                                }
+                            }
+                        );
+
+                        row.appendChild(approveButton);
+                    }
+
+                    usersList.appendChild(row);
+                }
+            } catch (error) {
+                usersList.textContent =
+                    'Không tải được danh sách tài khoản.';
+                showUserMessage(error.message, true);
+            } finally {
+                refreshUsersButton.disabled = false;
+            }
+        }
+
+        refreshUsersButton.addEventListener('click', loadUsers);
+
+        // =========================
+        // QUẢN LÝ BÀI TẬP
+        // =========================
+
         async function loadProblems() {
             list.textContent = 'Đang tải danh sách bài...';
 
             try {
                 const problems = await api('/api/admin/problems');
 
-                // Bỏ các ID không còn tồn tại khỏi danh sách đã chọn.
                 const existingIds = new Set(
                     problems.map(problem => String(problem.id))
                 );
@@ -280,7 +456,9 @@
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.checked = selectedIds.has(String(problem.id));
+                    checkbox.checked =
+                        selectedIds.has(String(problem.id));
+
                     checkbox.setAttribute(
                         'aria-label',
                         `Chọn bài ${problem.title}`
@@ -301,7 +479,8 @@
                     const textInfo = document.createElement('div');
 
                     const heading = document.createElement('h3');
-                    heading.textContent = `${problem.id} — ${problem.title}`;
+                    heading.textContent =
+                        `${problem.id} — ${problem.title}`;
 
                     const detail = document.createElement('p');
                     detail.className = 'muted';
@@ -317,12 +496,16 @@
                     actions.append(
                         makeButton('Sửa', 'secondary', () => {
                             editingId = String(problem.id);
-                            editor.value = JSON.stringify(problem, null, 2);
+                            editor.value =
+                                JSON.stringify(problem, null, 2);
+
                             title.textContent = `Sửa bài ${problem.id}`;
                             saveButton.textContent = 'Lưu thay đổi';
                             cancelButton.hidden = false;
                             showMessage('');
+
                             editor.focus();
+
                             window.scrollTo({
                                 top: document.body.scrollHeight,
                                 behavior: 'smooth'
@@ -351,13 +534,15 @@
                                 await loadProblems();
                                 showMessage('Đã xóa bài tập.');
                             } catch (error) {
-                                alert(`Không xóa được bài: ${error.message}`);
+                                alert(
+                                    `Không xóa được bài: ${error.message}`
+                                );
                             }
                         })
                     );
 
                     row.append(info, actions);
-                    list.append(row);
+                    list.appendChild(row);
                 }
 
                 updateSelectedCount();
@@ -442,6 +627,7 @@
                     `Đã xóa ${deleted} bài trước khi xảy ra lỗi: ` +
                     error.message
                 );
+
                 await loadProblems();
             } finally {
                 selectAllButton.disabled = false;
@@ -458,12 +644,22 @@
             try {
                 problem = JSON.parse(editor.value);
             } catch (error) {
-                showMessage(`JSON không hợp lệ: ${error.message}`, true);
+                showMessage(
+                    `JSON không hợp lệ: ${error.message}`,
+                    true
+                );
                 return;
             }
 
-            if (!problem || typeof problem !== 'object' || Array.isArray(problem)) {
-                showMessage('Dữ liệu phải là một đối tượng JSON.', true);
+            if (
+                !problem ||
+                typeof problem !== 'object' ||
+                Array.isArray(problem)
+            ) {
+                showMessage(
+                    'Dữ liệu phải là một đối tượng JSON.',
+                    true
+                );
                 return;
             }
 
@@ -481,6 +677,8 @@
                         }
                     );
 
+                    resetEditor();
+                    await loadProblems();
                     showMessage('Đã cập nhật bài tập.');
                 } else {
                     await api('/api/admin/problems', {
@@ -488,13 +686,15 @@
                         body: JSON.stringify(problem)
                     });
 
+                    resetEditor();
+                    await loadProblems();
                     showMessage('Đã thêm bài tập.');
                 }
-
-                resetEditor();
-                await loadProblems();
             } catch (error) {
-                showMessage(`Không lưu được: ${error.message}`, true);
+                showMessage(
+                    `Không lưu được: ${error.message}`,
+                    true
+                );
             } finally {
                 saveButton.disabled = false;
             }
@@ -502,6 +702,8 @@
 
         cancelButton.addEventListener('click', resetEditor);
 
+        // Tải cả tài khoản và ngân hàng đề khi mở trang.
+        loadUsers();
         loadProblems();
     </script>
 
