@@ -274,15 +274,19 @@ def create_app(test_config=None):
             return 'ended'
         return 'running'
 
+    
     def get_contest_data(contest_id, allow_hidden=False):
         with connect(app.config['DATABASE_PATH']) as db:
             contest = db.execute(
                 'SELECT * FROM contests WHERE id=?', (contest_id,)
             ).fetchone()
+
             if not contest:
                 return None
+
             if not contest['is_visible'] and not allow_hidden:
                 return None
+
             ids = db.execute(
                 '''SELECT problem_id FROM contest_problems
                    WHERE contest_id=?
@@ -290,22 +294,52 @@ def create_app(test_config=None):
                 (contest_id,)
             ).fetchall()
 
+            custom_rows = db.execute(
+                '''SELECT problem_id, title, statement,
+                          input_desc, output_desc, total_score
+                   FROM contest_custom_problems
+                   WHERE contest_id=?''',
+                (contest_id,)
+            ).fetchall()
+
         item = dict(contest)
         item['is_visible'] = bool(item['is_visible'])
         item['problem_ids'] = [r['problem_id'] for r in ids]
-        bank = {p['id']: p for p in problems()}
-        item['problems'] = [
-            {
-                'id': pid,
-                'title': bank[pid].get('title', pid),
-                'total_score': bank[pid]['total_score']
-            }
-            for pid in item['problem_ids'] if pid in bank
-        ]
+
+        bank = {str(p['id']): p for p in problems()}
+        custom = {
+            str(p['problem_id']): dict(p)
+            for p in custom_rows
+        }
+
+        item['problems'] = []
+
+        for row in ids:
+            pid = str(row['problem_id'])
+
+            if pid in custom:
+                p = custom[pid]
+                item['problems'].append({
+                    'id': pid,
+                    'title': p['title'],
+                    'total_score': p['total_score'],
+                    'is_custom': True,
+                    'statement': p['statement'],
+                    'input_desc': p['input_desc'],
+                    'output_desc': p['output_desc']
+                })
+            elif pid in bank:
+                p = bank[pid]
+                item['problems'].append({
+                    'id': pid,
+                    'title': p.get('title', pid),
+                    'total_score': p['total_score'],
+                    'is_custom': False
+                })
+
         item['state'] = contest_state(item)
         return item
 
-    @app.get('/health')
     def health():
         try:
             return jsonify(ok=True, problem_count=len(problems()))
