@@ -53,6 +53,28 @@ def load_problems(path):
 def save_problems(data, path):
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
+
+    if os.getenv('GITHUB_TOKEN'):
+        branch = os.getenv('GITHUB_BRANCH', 'main')
+        _, sha = github_read_problems()
+
+        payload = {
+            'message': 'Update problem bank from Online Judge',
+            'content': base64.b64encode(
+                json.dumps(
+                    data, ensure_ascii=False, indent=2
+                ).encode('utf-8')
+            ).decode('ascii'),
+            'sha': sha,
+            'branch': branch
+        }
+
+        github_request(
+            '/contents/data/problems.json',
+            method='PUT',
+            payload=payload
+        )
+
     tmp = target.with_suffix(target.suffix + '.tmp')
     tmp.write_text(
         json.dumps(data, ensure_ascii=False, indent=2),
