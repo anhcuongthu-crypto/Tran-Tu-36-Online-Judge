@@ -198,6 +198,37 @@
     </section>
 
     <!-- THÊM / SỬA BÀI TẬP -->
+    <!-- QUẢN LÝ CONTEST -->
+<section class="panel">
+    <h2>🏆 Quản lý Contest</h2>
+
+    <label for="contestTitle">Tên Contest</label>
+    <input id="contestTitle" type="text" placeholder="Ví dụ: Tuyen Sinh Lam Son 2027">
+
+    <label for="contestDescription">Mô tả</label>
+    <textarea id="contestDescription" placeholder="Mô tả kỳ thi"></textarea>
+
+    <label for="contestStart">Thời gian bắt đầu</label>
+    <input id="contestStart" type="datetime-local">
+
+    <label for="contestEnd">Thời gian kết thúc</label>
+    <input id="contestEnd" type="datetime-local">
+
+    <h3>Chọn bài tập cho Contest</h3>
+    <div id="contestProblems">Đang tải danh sách bài tập...</div>
+
+    <label>
+        <input id="contestVisible" type="checkbox" checked>
+        Hiển thị Contest cho thí sinh
+    </label>
+
+    <button type="button" onclick="createContest()">Tạo Contest</button>
+    <p id="contestMessage" class="message"></p>
+
+    <hr>
+    <h3>Danh sách Contest</h3>
+    <div id="contestList">Đang tải Contest...</div>
+</section>
     <section class="panel">
         <h2 id="editor-title">Thêm bài tập</h2>
 
