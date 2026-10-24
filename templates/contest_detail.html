@@ -161,23 +161,24 @@ async function loadContest() {
     return;
   }
 
-  $('problems').innerHTML = problemList.map((p, i) => {
-    const problemUrl = p.url || '/problems/' + encodeURIComponent(p.id);
-
-    return `
-      <div class="problem">
-        <div>
-          <h3>
-            <a href="${escapeHTML(problemUrl)}">
-              ${i + 1}. ${escapeHTML(p.title)}
-            </a>
-          </h3>
-          <div class="muted">Mã bài: ${escapeHTML(p.id)}</div>
-        </div>
-        <span class="score">${Number(p.total_score) || 0} điểm</span>
+ 
+$('problems').innerHTML = problemList.map((p, i) => {
+  return `
+    <div class="problem">
+      <div>
+        <h3>
+          <a href="#"
+             onclick="showProblem('${escapeHTML(p.id)}'); return false;">
+            ${i + 1}. ${escapeHTML(p.title)}
+          </a>
+        </h3>
+        <div class="muted">Mã bài: ${escapeHTML(p.id)}</div>
       </div>
-    `;
-  }).join('');
+      <span class="score">${Number(p.total_score) || 0} điểm</span>
+    </div>
+  `;
+}).join('');
+
 
   $('problemId').innerHTML = problemList.map(p => `
     <option value="${escapeHTML(p.id)}">
