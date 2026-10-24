@@ -1,111 +1,226 @@
+{% extends "base.html" %}
 
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Contest | TranTu Online Judge</title>
+{% block title %}Contest — OJ Studio{% endblock %}
+
+{% block content %}
 <style>
-:root{--bg:#0b1020;--panel:#131c30;--line:#27344d;--text:#edf2ff;--muted:#9eacc5;--primary:#8b7cff;--green:#34d399}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px Arial,sans-serif}
-a{color:inherit;text-decoration:none}
-.nav{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(5%,calc((100% - 1150px)/2));background:#0d1426}
-.brand{font-size:20px;font-weight:800;color:#a99dff}
-.nav a{margin-left:20px;color:var(--muted)}
-.wrap{max-width:1150px;margin:38px auto;padding:0 20px}
-.hero{padding:30px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(120deg,#20234a,#131c30);margin-bottom:26px}
-.hero h1{font-size:34px;margin:0 0 12px}
-.hero p{color:var(--muted);line-height:1.7;margin:0}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:24px 0}
-.stat,.card,.admin{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:20px}
-.stat small,.muted{color:var(--muted)}
-.stat strong{display:block;font-size:26px;margin-top:10px}
-.heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:32px 0 16px}
-.heading h2{margin:0}
-input,textarea,select{width:100%;padding:12px;background:#0b1222;color:var(--text);border:1px solid var(--line);border-radius:9px;margin:6px 0 14px}
-button,.btn{display:inline-block;border:0;border-radius:9px;padding:11px 16px;background:var(--primary);color:white;font-weight:bold;cursor:pointer}
-button.secondary{background:#26334b}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.card h3{margin:12px 0;font-size:20px}
-.card p{color:var(--muted);line-height:1.6}
-.badge{display:inline-block;padding:6px 10px;border-radius:30px;font-size:12px;background:#27344d;color:#c6d2e8}
-.badge.running{background:#123e36;color:#6ee7b7}
-.badge.upcoming{background:#3b2e15;color:#fcd34d}
-.badge.ended{background:#30364a;color:#b7c2d6}
-.card-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px}
-.admin{margin-top:32px}
-.admin h2{margin-top:0}
-.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 0 18px}
-.checkitem{display:flex;align-items:center;gap:8px;background:#0b1222;padding:10px;border-radius:8px}
-.checkitem input{width:auto;margin:0}
-#message{margin:12px 0;color:var(--green)}
-.empty{padding:32px;text-align:center;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
-@media(max-width:650px){.grid,.stats,.formgrid,.checklist{grid-template-columns:1fr}.hero h1{font-size:27px}.nav{padding:0 16px}.nav a{margin-left:10px}.wrap{margin-top:22px}}
+.contest-page {
+  max-width: 1150px;
+  margin: 38px auto;
+  padding: 0 20px;
+  color: var(--text, #edf2ff);
+}
+.contest-hero {
+  padding: 32px;
+  border: 1px solid var(--line, #27344d);
+  border-radius: 20px;
+  background: linear-gradient(120deg, rgba(109,40,217,.22), rgba(99,102,241,.08));
+  margin-bottom: 26px;
+}
+.contest-hero h1 {
+  font-size: clamp(27px, 4vw, 36px);
+  margin: 0 0 12px;
+}
+.contest-hero p, .contest-muted {
+  color: var(--muted, #9eacc5);
+  line-height: 1.7;
+}
+.contest-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin: 24px 0;
+}
+.contest-stat, .contest-card, .contest-admin {
+  background: var(--panel, rgba(19,28,48,.75));
+  border: 1px solid var(--line, #27344d);
+  border-radius: 15px;
+  padding: 20px;
+}
+.contest-stat small { color: var(--muted, #9eacc5); }
+.contest-stat strong {
+  display: block;
+  font-size: 26px;
+  margin-top: 10px;
+}
+.contest-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 32px 0 16px;
+}
+.contest-heading h2 { margin: 0; }
+.contest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.contest-card {
+  transition: border-color .2s, transform .2s;
+}
+.contest-card:hover {
+  border-color: #8b5cf6;
+  transform: translateY(-2px);
+}
+.contest-card h3 { margin: 12px 0; font-size: 20px; }
+.contest-card p {
+  color: var(--muted, #9eacc5);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.contest-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 30px;
+  font-size: 12px;
+  background: rgba(109,40,217,.18);
+  color: #c4b5fd;
+}
+.contest-badge.running { background: #123e36; color: #6ee7b7; }
+.contest-badge.upcoming { background: #3b2e15; color: #fcd34d; }
+.contest-badge.ended { background: #30364a; color: #b7c2d6; }
+.contest-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.contest-btn {
+  display: inline-block;
+  border: 1px solid rgba(139,92,246,.5);
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: #6d28d9;
+  color: white !important;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.contest-btn:hover { background: #7c3aed; }
+.contest-btn.secondary { background: transparent; border-color: var(--line, #27344d); }
+.contest-admin { margin-top: 32px; }
+.contest-admin h2 { margin-top: 0; }
+.contest-page input:not([type="checkbox"]),
+.contest-page textarea,
+.contest-page select {
+  width: 100%;
+  padding: 12px;
+  background: var(--input-bg, #0b1222);
+  color: inherit;
+  border: 1px solid var(--line, #27344d);
+  border-radius: 9px;
+  margin: 6px 0 14px;
+  font: inherit;
+}
+.contest-page input[type="checkbox"] { accent-color: #7c3aed; }
+.contest-formgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.contest-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 18px;
+}
+.contest-checkitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(109,40,217,.07);
+  border: 1px solid var(--line, #27344d);
+  padding: 10px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.contest-checkitem input { flex-shrink: 0; }
+#message { margin: 12px 0; color: #34d399; }
+.contest-empty {
+  padding: 32px;
+  text-align: center;
+  border: 1px dashed var(--line, #27344d);
+  border-radius: 12px;
+  color: var(--muted, #9eacc5);
+  grid-column: 1 / -1;
+}
+@media(max-width:650px) {
+  .contest-grid, .contest-stats, .contest-formgrid, .contest-checklist {
+    grid-template-columns: 1fr;
+  }
+  .contest-hero { padding: 22px; }
+  .contest-page { margin-top: 22px; padding: 0 14px; }
+}
 </style>
-</head>
-<body>
-<header class="nav">
-  <a class="brand" href="/">TranTu OJ</a>
-  <div><a href="/">Trang chủ</a><a href="/api/leaderboard">Xếp hạng</a></div>
-</header>
 
-<main class="wrap">
-  <section class="hero">
-    <h1>Contest Arena</h1>
+<div class="contest-page">
+  <section class="contest-hero">
+    <h1>🏆 Contest</h1>
     <p>Thử sức với các cuộc thi lập trình, theo dõi điểm số và cạnh tranh trên bảng xếp hạng.</p>
   </section>
 
-  <section class="stats">
-    <div class="stat"><small>Tổng cuộc thi</small><strong id="total">—</strong></div>
-    <div class="stat"><small>Đang diễn ra</small><strong id="running">—</strong></div>
-    <div class="stat"><small>Sắp diễn ra</small><strong id="upcoming">—</strong></div>
+  <section class="contest-stats">
+    <div class="contest-stat">
+      <small>Tổng cuộc thi</small>
+      <strong id="total">—</strong>
+    </div>
+    <div class="contest-stat">
+      <small>Đang diễn ra</small>
+      <strong id="running">—</strong>
+    </div>
+    <div class="contest-stat">
+      <small>Sắp diễn ra</small>
+      <strong id="upcoming">—</strong>
+    </div>
   </section>
 
-  <div class="heading">
+  <div class="contest-heading">
     <h2>Danh sách cuộc thi</h2>
-    <button class="secondary" onclick="loadContests()">Làm mới</button>
+    <button type="button" class="contest-btn secondary" onclick="loadContests()">Làm mới</button>
   </div>
 
-  <section id="contestList" class="grid">
-    <div class="empty">Đang tải cuộc thi...</div>
+  <section id="contestList" class="contest-grid">
+    <div class="contest-empty">Đang tải cuộc thi...</div>
   </section>
 
-  <section id="adminPanel" class="admin" hidden>
+  <section id="adminPanel" class="contest-admin" hidden>
     <h2>＋ Tạo cuộc thi mới</h2>
-    <p class="muted">Chỉ quản trị viên mới có thể tạo cuộc thi.</p>
+    <p class="contest-muted">Chỉ quản trị viên mới có thể tạo cuộc thi.</p>
+
     <form id="createForm">
-      <label>Tên cuộc thi</label>
-      <input name="title" maxlength="160" required placeholder="Ví dụ: HSG Tin học vòng 1">
+      <label for="contest-title">Tên cuộc thi</label>
+      <input id="contest-title" name="title" maxlength="160" required placeholder="Ví dụ: HSG Tin học vòng 1">
 
-      <label>Mô tả</label>
-      <textarea name="description" maxlength="5000" rows="3" placeholder="Thông tin về cuộc thi"></textarea>
+      <label for="contest-description">Mô tả</label>
+      <textarea id="contest-description" name="description" maxlength="5000" rows="3" placeholder="Thông tin về cuộc thi"></textarea>
 
-      <div class="formgrid">
+      <div class="contest-formgrid">
         <div>
-          <label>Thời gian bắt đầu</label>
-          <input type="datetime-local" name="start_time" required>
+          <label for="contest-start">Thời gian bắt đầu</label>
+          <input id="contest-start" type="datetime-local" name="start_time" required>
         </div>
         <div>
-          <label>Thời gian kết thúc</label>
-          <input type="datetime-local" name="end_time" required>
+          <label for="contest-end">Thời gian kết thúc</label>
+          <input id="contest-end" type="datetime-local" name="end_time" required>
         </div>
       </div>
 
       <label>Chọn bài thi</label>
-      <div id="problemList" class="checklist">Đang tải bài tập...</div>
+      <div id="problemList" class="contest-checklist">Đang tải bài tập...</div>
 
-      <label class="checkitem">
+      <label class="contest-checkitem">
         <input type="checkbox" name="is_visible" checked>
         Hiển thị cuộc thi công khai
       </label>
-      <br><br>
-      <button type="submit">Tạo cuộc thi</button>
-      <div id="message"></div>
+
+      <p><button class="contest-btn" type="submit">Tạo cuộc thi</button></p>
+      <div id="message" role="status"></div>
     </form>
   </section>
-</main>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -129,7 +244,7 @@ const stateNames = {
 
 async function loadContests() {
   const list = $('contestList');
-  list.innerHTML = '<div class="empty">Đang tải...</div>';
+  list.innerHTML = '<div class="contest-empty">Đang tải...</div>';
 
   try {
     const response = await fetch('/api/contests');
@@ -142,25 +257,25 @@ async function loadContests() {
     $('upcoming').textContent = data.filter(x => x.state === 'upcoming').length;
 
     if (!data.length) {
-      list.innerHTML = '<div class="empty">Chưa có cuộc thi nào.</div>';
+      list.innerHTML = '<div class="contest-empty">Chưa có cuộc thi nào.</div>';
       return;
     }
 
     list.innerHTML = data.map(c => `
-      <article class="card">
-        <span class="badge ${escapeHTML(c.state)}">${escapeHTML(stateNames[c.state] || c.state)}</span>
+      <article class="contest-card">
+        <span class="contest-badge ${escapeHTML(c.state)}">${escapeHTML(stateNames[c.state] || c.state)}</span>
         <h3>${escapeHTML(c.title)}</h3>
         <p>${escapeHTML(c.description || 'Chưa có mô tả.')}</p>
         <p>📅 Bắt đầu: ${escapeHTML(formatDate(c.start_time))}</p>
         <p>🏁 Kết thúc: ${escapeHTML(formatDate(c.end_time))}</p>
-        <div class="card-foot">
-          <span class="muted">ID #${Number(c.id)}</span>
-          <a class="btn" href="/contests/${Number(c.id)}">Xem cuộc thi →</a>
+        <div class="contest-card-foot">
+          <span class="contest-muted">ID #${Number(c.id)}</span>
+          <a class="contest-btn" href="/contests/${Number(c.id)}">Xem cuộc thi →</a>
         </div>
       </article>
     `).join('');
   } catch (e) {
-    list.innerHTML = `<div class="empty">${escapeHTML(e.message)}</div>`;
+    list.innerHTML = `<div class="contest-empty">${escapeHTML(e.message)}</div>`;
   }
 }
 
@@ -174,10 +289,11 @@ async function loadAdmin() {
     $('adminPanel').hidden = false;
 
     const response = await fetch('/api/problems');
+    if (!response.ok) throw new Error('Không tải được danh sách bài tập.');
     const problems = await response.json();
 
     $('problemList').innerHTML = problems.map(p => `
-      <label class="checkitem">
+      <label class="contest-checkitem">
         <input type="checkbox" name="problem_ids" value="${escapeHTML(p.id)}">
         <span>${escapeHTML(p.id)} — ${escapeHTML(p.title)}</span>
       </label>
@@ -196,6 +312,11 @@ $('createForm').addEventListener('submit', async e => {
 
   if (!problem_ids.length) {
     $('message').textContent = 'Hãy chọn ít nhất một bài.';
+    return;
+  }
+
+  if (new Date(fd.get('end_time')) <= new Date(fd.get('start_time'))) {
+    $('message').textContent = 'Thời gian kết thúc phải sau thời gian bắt đầu.';
     return;
   }
 
@@ -223,7 +344,7 @@ $('createForm').addEventListener('submit', async e => {
 
     $('message').textContent = `Đã tạo cuộc thi #${data.id}.`;
     form.reset();
-    loadContests();
+    await loadContests();
   } catch (err) {
     $('message').textContent = err.message;
   }
@@ -232,5 +353,4 @@ $('createForm').addEventListener('submit', async e => {
 loadContests();
 loadAdmin();
 </script>
-</body>
-</html>
+{% endblock %}
