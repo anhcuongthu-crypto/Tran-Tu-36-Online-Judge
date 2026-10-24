@@ -26,6 +26,7 @@ h2{font-size:20px}
 .problem{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:15px 0}
 .problem:last-child{border-bottom:0}
 .problem h3{margin:0 0 6px}
+.problem h3 a:hover{color:#b7aaff;text-decoration:underline}
 .score{color:#c3baff;white-space:nowrap}
 button,.btn{display:inline-block;border:0;border-radius:9px;padding:11px 15px;background:var(--primary);color:white;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
@@ -107,7 +108,11 @@ let problemList = [];
 
 function escapeHTML(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({
-    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
   })[c]);
 }
 
@@ -126,13 +131,17 @@ async function loadContest() {
   const r = await fetch(`/api/contests/${CONTEST_ID}`);
   const data = await r.json();
 
-  if (!r.ok) throw new Error(data.error || 'Không tải được cuộc thi.');
+  if (!r.ok) {
+    throw new Error(data.error || 'Không tải được cuộc thi.');
+  }
 
   contest = data;
   problemList = data.problems || [];
 
   $('contestHeader').innerHTML = `
-    <span class="badge ${escapeHTML(data.state)}">${escapeHTML(stateNames[data.state] || data.state)}</span>
+    <span class="badge ${escapeHTML(data.state)}">
+      ${escapeHTML(stateNames[data.state] || data.state)}
+    </span>
     <h1>${escapeHTML(data.title)}</h1>
     <p class="muted">${escapeHTML(data.description || 'Chưa có mô tả.')}</p>
   `;
@@ -145,24 +154,35 @@ async function loadContest() {
   `;
 
   if (!problemList.length) {
-    $('problems').innerHTML = '<div class="empty">Cuộc thi chưa có bài nào.</div>';
+    $('problems').innerHTML =
+      '<div class="empty">Cuộc thi chưa có bài nào.</div>';
     $('problemId').innerHTML = '';
     $('submitButton').disabled = true;
     return;
   }
 
-  $('problems').innerHTML = problemList.map((p, i) => `
-    <div class="problem">
-      <div>
-        <h3><a href="#" data-problem="${escapeHTML(p.id)}">${i + 1}. ${escapeHTML(p.title)}</a></h3>
-        <div class="muted">Mã bài: ${escapeHTML(p.id)}</div>
+  $('problems').innerHTML = problemList.map((p, i) => {
+    const problemUrl = p.url || '/problems/' + encodeURIComponent(p.id);
+
+    return `
+      <div class="problem">
+        <div>
+          <h3>
+            <a href="${escapeHTML(problemUrl)}">
+              ${i + 1}. ${escapeHTML(p.title)}
+            </a>
+          </h3>
+          <div class="muted">Mã bài: ${escapeHTML(p.id)}</div>
+        </div>
+        <span class="score">${Number(p.total_score) || 0} điểm</span>
       </div>
-      <span class="score">${Number(p.total_score) || 0} điểm</span>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   $('problemId').innerHTML = problemList.map(p => `
-    <option value="${escapeHTML(p.id)}">${escapeHTML(p.id)} — ${escapeHTML(p.title)}</option>
+    <option value="${escapeHTML(p.id)}">
+      ${escapeHTML(p.id)} — ${escapeHTML(p.title)}
+    </option>
   `).join('');
 
   const canSubmit = data.state === 'running';
@@ -173,14 +193,6 @@ async function loadContest() {
       ? 'Cuộc thi chưa bắt đầu, hiện chưa thể nộp bài.'
       : 'Cuộc thi đã kết thúc, hiện chưa thể nộp bài.';
   }
-
-  $('problems').querySelectorAll('[data-problem]').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      $('problemId').value = link.dataset.problem;
-      $('sourceCode').focus();
-    });
-  });
 }
 
 async function loadLeaderboard() {
@@ -190,7 +202,9 @@ async function loadLeaderboard() {
     const r = await fetch(`/api/contests/${CONTEST_ID}/leaderboard`);
     const data = await r.json();
 
-    if (!r.ok) throw new Error(data.error || 'Không tải được bảng xếp hạng.');
+    if (!r.ok) {
+      throw new Error(data.error || 'Không tải được bảng xếp hạng.');
+    }
 
     if (!data.length) {
       box.innerHTML = '<div class="empty">Chưa có kết quả.</div>';
@@ -199,7 +213,9 @@ async function loadLeaderboard() {
 
     box.innerHTML = `
       <table>
-        <thead><tr><th>#</th><th>Thí sinh</th><th>Điểm</th><th>AC</th></tr></thead>
+        <thead>
+          <tr><th>#</th><th>Thí sinh</th><th>Điểm</th><th>AC</th></tr>
+        </thead>
         <tbody>
           ${data.map((x, i) => `
             <tr>
@@ -265,7 +281,7 @@ $('submitForm').addEventListener('submit', async e => {
     $('message').className = 'error';
     $('message').textContent = err.message;
   } finally {
-    $('submitButton').disabled = contest.state !== 'running';
+    $('submitButton').disabled = !contest || contest.state !== 'running';
   }
 });
 
@@ -281,3 +297,4 @@ $('submitForm').addEventListener('submit', async e => {
 </script>
 </body>
 </html>
+```
