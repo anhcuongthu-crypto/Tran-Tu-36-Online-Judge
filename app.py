@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -24,16 +25,27 @@ def load_problems(path):
         raise ValueError('Problems JSON phải là danh sách.')
 
     ids = set()
+
     for p in data:
-        if p.get('id') in ids:
-            raise ValueError('Trùng problem id: ' + str(p.get('id')))
-        ids.add(p.get('id'))
+        if not isinstance(p, dict):
+            raise ValueError('Mỗi bài phải là một object.')
+
+        if not p.get('id'):
+            raise ValueError('Bài thiếu problem id.')
+
+        if p['id'] in ids:
+            raise ValueError('Trùng problem id: ' + str(p['id']))
+
+        ids.add(p['id'])
+
+        if not p.get('subtasks'):
+            raise ValueError('Bài thiếu subtasks: ' + str(p['id']))
 
         if sum(int(s['score']) for s in p['subtasks']) != int(p['total_score']):
-            raise ValueError('Điểm subtasks không khớp ' + str(p.get('id')))
+            raise ValueError('Điểm subtasks không khớp ' + str(p['id']))
 
-        if not p['subtasks'] or any(not s.get('tests') for s in p['subtasks']):
-            raise ValueError('Subtask thiếu test ' + str(p.get('id')))
+        if any(not s.get('tests') for s in p['subtasks']):
+            raise ValueError('Subtask thiếu test ' + str(p['id']))
 
     return data
 
@@ -41,6 +53,7 @@ def load_problems(path):
 def save_problems(data, path):
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
+
     tmp = target.with_suffix(target.suffix + '.tmp')
     tmp.write_text(
         json.dumps(data, ensure_ascii=False, indent=2),
@@ -79,6 +92,61 @@ def initialize_problem_file(app):
         target.write_text('[]', encoding='utf-8')
 
 
+def init_problem_history(db_path):
+    with connect(db_path) as db:
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS problem_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                before_json TEXT NOT NULL,
+                after_json TEXT NOT NULL,
+                removed_json TEXT NOT NULL DEFAULT '[]'
+            )
+        ''')
+
+
+def save_problem_history(db_path, action, before, after, removed=None):
+    with connect(db_path) as db:
+        db.execute('''
+            INSERT INTO problem_history
+                (action, created_at, before_json, after_json, removed_json)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            action,
+            datetime.now().isoformat(timespec='seconds'),
+            json.dumps(before, ensure_ascii=False),
+            json.dumps(after, ensure_ascii=False),
+            json.dumps(removed or [], ensure_ascii=False)
+        ))
+
+
+def normalize_statement(statement):
+    text = unicodedata.normalize('NFKC', str(statement or ''))
+    text = text.casefold()
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def remove_duplicate_problems(bank):
+    seen = set()
+    result = []
+    removed = []
+
+    for problem in bank:
+        statement = normalize_statement(problem.get('statement', ''))
+
+        # Không tự động xóa bài thiếu đề bài.
+        if not statement:
+            result.append(problem)
+        elif statement in seen:
+            removed.append(problem)
+        else:
+            seen.add(statement)
+            result.append(problem)
+
+    return result, removed
+
+
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
 
@@ -109,6 +177,7 @@ def create_app(test_config=None):
 
     initialize_problem_file(app)
     init_db(app.config['DATABASE_PATH'])
+    init_problem_history(app.config['DATABASE_PATH'])
 
     if app.config.get('ADMIN_PASSWORD'):
         with connect(app.config['DATABASE_PATH']) as db:
@@ -207,7 +276,6 @@ def create_app(test_config=None):
 
         bank = {p['id']: p for p in problems()}
 
-        # ĐÃ SỬA: Mỗi bài có URL để mở trang đề bài.
         item['problems'] = [
             {
                 'id': pid,
@@ -362,7 +430,7 @@ def create_app(test_config=None):
 
         return jsonify(user=dict(row) if row else None)
 
-    @app.route('/profile', methods=['GET'])
+    @app.get('/profile')
     def profile_page():
         if not current_user():
             return redirect(url_for('home'))
@@ -418,7 +486,8 @@ def create_app(test_config=None):
             rows = db.execute(
                 '''SELECT id, problem_id, language_id, verdict,
                           score, max_score, details_json, created_at, contest_id
-                   FROM submissions WHERE user_id=? ORDER BY id DESC LIMIT 200''',
+                   FROM submissions WHERE user_id=?
+                   ORDER BY id DESC LIMIT 200''',
                 (user['id'],)
             ).fetchall()
 
@@ -451,7 +520,6 @@ def create_app(test_config=None):
 
         result = dict(row)
         result['details'] = json.loads(result.pop('details_json') or '[]')
-
         return jsonify(result)
 
     @app.get('/api/leaderboard')
@@ -753,10 +821,7 @@ def create_app(test_config=None):
                 '''INSERT INTO contest_problems
                    (contest_id, problem_id, position)
                    VALUES (?, ?, ?)''',
-                [
-                    (contest_id, pid, i)
-                    for i, pid in enumerate(ids)
-                ]
+                [(contest_id, pid, i) for i, pid in enumerate(ids)]
             )
 
         return jsonify(ok=True, id=contest_id), 201
@@ -836,10 +901,7 @@ def create_app(test_config=None):
                 '''INSERT INTO contest_problems
                    (contest_id, problem_id, position)
                    VALUES (?, ?, ?)''',
-                [
-                    (contest_id, pid, i)
-                    for i, pid in enumerate(ids)
-                ]
+                [(contest_id, pid, i) for i, pid in enumerate(ids)]
             )
 
         return jsonify(ok=True, id=contest_id)
@@ -868,10 +930,7 @@ def create_app(test_config=None):
                     error='Cuộc thi đã có bài nộp, không thể xóa.'
                 ), 409
 
-            db.execute(
-                'DELETE FROM contests WHERE id=?',
-                (contest_id,)
-            )
+            db.execute('DELETE FROM contests WHERE id=?', (contest_id,))
 
         return jsonify(ok=True)
 
@@ -945,8 +1004,225 @@ def create_app(test_config=None):
             return jsonify(error='Không tìm thấy bài.'), 404
 
         save_problems(new, app.config['PROBLEMS_PATH'])
-
         return jsonify(ok=True)
+
+    # ==================== BULK RENAME ====================
+
+    @app.put('/api/admin/problems/bulk-rename')
+    def admin_bulk_rename():
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        data = request.get_json(silent=True) or {}
+        changes = data.get('changes')
+
+        if not isinstance(changes, list) or not changes:
+            return jsonify(error='Danh sách đổi tên không hợp lệ.'), 400
+
+        try:
+            before = problems()
+            by_id = {p['id']: p for p in before}
+            seen = set()
+            validated = []
+
+            for item in changes:
+                if not isinstance(item, dict):
+                    return jsonify(error='Dữ liệu đổi tên không hợp lệ.'), 400
+
+                pid = str(item.get('id', '')).strip()
+                title = str(item.get('title', '')).strip()
+
+                if pid not in by_id:
+                    return jsonify(error=f'Không tìm thấy bài {pid}.'), 404
+
+                if pid in seen:
+                    return jsonify(error=f'Bài {pid} bị lặp.'), 400
+
+                if not title or len(title) > 200:
+                    return jsonify(
+                        error=f'Tên bài {pid} phải từ 1 đến 200 ký tự.'
+                    ), 400
+
+                seen.add(pid)
+                validated.append((pid, title))
+
+            after = json.loads(json.dumps(before, ensure_ascii=False))
+            after_by_id = {p['id']: p for p in after}
+
+            for pid, title in validated:
+                after_by_id[pid]['title'] = title
+
+            save_problem_history(
+                app.config['DATABASE_PATH'],
+                'bulk_rename',
+                before,
+                after
+            )
+            save_problems(after, app.config['PROBLEMS_PATH'])
+
+            return jsonify(
+                ok=True,
+                updated_count=len(validated),
+                message=f'Đã cập nhật tên {len(validated)} bài.'
+            )
+
+        except Exception as e:
+            app.logger.exception('Lỗi đổi tên hàng loạt')
+            return jsonify(error=str(e)), 500
+
+    # ==================== REMOVE DUPLICATES ====================
+
+    @app.post('/api/admin/problems/remove-duplicates')
+    def admin_remove_duplicates():
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        try:
+            before = problems()
+            after, removed = remove_duplicate_problems(before)
+
+            if not removed:
+                return jsonify(
+                    ok=True,
+                    removed_count=0,
+                    remaining_count=len(after),
+                    message='Không tìm thấy bài trùng.'
+                )
+
+            save_problem_history(
+                app.config['DATABASE_PATH'],
+                'remove_duplicates',
+                before,
+                after,
+                removed
+            )
+            save_problems(after, app.config['PROBLEMS_PATH'])
+
+            return jsonify(
+                ok=True,
+                removed_count=len(removed),
+                remaining_count=len(after),
+                removed=[
+                    {
+                        'id': p.get('id'),
+                        'title': p.get('title', '')
+                    }
+                    for p in removed
+                ],
+                message=f'Đã loại {len(removed)} bài trùng.'
+            )
+
+        except Exception as e:
+            app.logger.exception('Lỗi lọc bài trùng')
+            return jsonify(error=str(e)), 500
+
+    # ==================== PROBLEM HISTORY ====================
+
+    @app.get('/api/admin/problem-history')
+    def admin_problem_history():
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            rows = db.execute('''
+                SELECT id, action, created_at
+                FROM problem_history
+                ORDER BY id DESC
+                LIMIT 200
+            ''').fetchall()
+
+        return jsonify([dict(row) for row in rows])
+
+    @app.get('/api/admin/problem-history/<int:history_id>')
+    def admin_problem_history_detail(history_id):
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            row = db.execute(
+                'SELECT * FROM problem_history WHERE id=?',
+                (history_id,)
+            ).fetchone()
+
+        if not row:
+            return jsonify(error='Không tìm thấy lịch sử.'), 404
+
+        item = dict(row)
+        item['before'] = json.loads(item.pop('before_json'))
+        item['after'] = json.loads(item.pop('after_json'))
+        item['removed'] = json.loads(item.pop('removed_json'))
+
+        return jsonify(item)
+
+    @app.post('/api/admin/problem-history/<int:history_id>/restore')
+    def admin_restore_problem_history(history_id):
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        try:
+            with connect(app.config['DATABASE_PATH']) as db:
+                row = db.execute(
+                    'SELECT * FROM problem_history WHERE id=?',
+                    (history_id,)
+                ).fetchone()
+
+            if not row:
+                return jsonify(error='Không tìm thấy lịch sử.'), 404
+
+            target = json.loads(row['before_json'])
+
+            if not isinstance(target, list):
+                return jsonify(error='Dữ liệu lịch sử không hợp lệ.'), 400
+
+            # Kiểm tra dữ liệu khôi phục trước khi ghi file.
+            temp_path = Path(app.config['PROBLEMS_PATH']).with_suffix('.restore.tmp')
+            temp_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path.write_text(
+                json.dumps(target, ensure_ascii=False, indent=2),
+                encoding='utf-8'
+            )
+
+            try:
+                load_problems(temp_path)
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()
+
+            current = problems()
+
+            save_problem_history(
+                app.config['DATABASE_PATH'],
+                'before_restore',
+                current,
+                target
+            )
+            save_problems(target, app.config['PROBLEMS_PATH'])
+
+            return jsonify(
+                ok=True,
+                restored_count=len(target),
+                message='Đã khôi phục danh sách bài.'
+            )
+
+        except Exception as e:
+            app.logger.exception('Lỗi khôi phục lịch sử')
+            return jsonify(error=str(e)), 500
+
+    # ==================== ADMIN PAGES ====================
+
+    @app.get('/admin/problem-history')
+    def admin_problem_history_page():
+        if not admin_required():
+            return render_template('not_found.html'), 403
+
+        return render_template('problem_history.html')
+
+    @app.get('/admin/bulk-rename')
+    def admin_bulk_rename_page():
+        if not admin_required():
+            return render_template('not_found.html'), 403
+
+        return render_template('bulk_rename.html')
 
     register_admin_routes(
         app,
@@ -963,4 +1239,3 @@ app = create_app()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-```
