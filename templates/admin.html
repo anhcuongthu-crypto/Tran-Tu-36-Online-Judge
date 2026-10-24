@@ -230,8 +230,49 @@
     <label for="contestEnd">Thời gian kết thúc</label>
     <input id="contestEnd" type="datetime-local">
 
-    <h3>Chọn bài tập cho Contest</h3>
+        <h3>Chọn bài từ ngân hàng đề</h3>
     <div id="contestProblems">Đang tải danh sách bài tập...</div>
+
+    <hr>
+
+    <h3>Thêm bài riêng cho Contest</h3>
+    <p class="muted">
+        Bài riêng chỉ thuộc Contest này, không thêm vào ngân hàng đề chung.
+    </p>
+
+    <label for="customProblemId">ID bài riêng</label>
+    <input id="customProblemId" type="text" placeholder="VD: LS2027_C1">
+
+    <label for="customProblemTitle">Tên bài</label>
+    <input id="customProblemTitle" type="text" placeholder="Tên bài tập">
+
+    <label for="customProblemStatement">Đề bài</label>
+    <textarea id="customProblemStatement" placeholder="Nhập nội dung đề bài"></textarea>
+
+    <label for="customProblemInput">Mô tả dữ liệu vào</label>
+    <textarea id="customProblemInput" placeholder="Dữ liệu vào"></textarea>
+
+    <label for="customProblemOutput">Mô tả dữ liệu ra</label>
+    <textarea id="customProblemOutput" placeholder="Dữ liệu ra"></textarea>
+
+    <label for="customProblemScore">Tổng điểm</label>
+    <input id="customProblemScore" type="number" min="1" value="10">
+
+    <label for="customProblemTime">Giới hạn thời gian (giây)</label>
+    <input id="customProblemTime" type="number" min="0.1" step="0.1" value="1">
+
+    <label for="customProblemMemory">Giới hạn bộ nhớ (KB)</label>
+    <input id="customProblemMemory" type="number" min="1" value="256000">
+
+    <label for="customProblemSubtasks">Subtasks và test (JSON)</label>
+    <textarea id="customProblemSubtasks" placeholder='[{"id":"1","name":"Subtask 1","score":10,"tests":[{"input":"5\n","output":"5\n"}]}]'></textarea>
+
+    <button type="button" id="addCustomProblem" class="success">
+        Thêm bài riêng vào Contest
+    </button>
+    <div id="customProblemMessage" class="message"></div>
+
+    <div id="customProblemList"></div>
 
     <label>
         <input id="contestVisible" type="checkbox" checked>
