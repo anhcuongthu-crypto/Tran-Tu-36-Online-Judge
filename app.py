@@ -82,6 +82,60 @@ def save_problems(data, path):
     )
     tmp.replace(target)
 
+def github_request(path, method='GET', payload=None):
+    token = os.getenv('GITHUB_TOKEN')
+    owner = os.getenv('GITHUB_OWNER')
+    repo = os.getenv('GITHUB_REPO')
+
+    if not token or not owner or not repo:
+        raise RuntimeError('Thiếu cấu hình GitHub.')
+
+    url = f'https://api.github.com/repos/{owner}/{repo}{path}'
+
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'Tran-Tu-36-Online-Judge'
+    }
+
+    body = None
+    if payload is not None:
+        headers['Content-Type'] = 'application/json'
+        body = json.dumps(payload).encode('utf-8')
+
+    req = urllib.request.Request(
+        url, data=body, headers=headers, method=method
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            raw = response.read().decode('utf-8')
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode('utf-8', errors='replace')
+        raise RuntimeError(f'GitHub API lỗi {e.code}: {detail}')
+
+
+def github_read_problems():
+    branch = quote(os.getenv('GITHUB_BRANCH', 'main'), safe='')
+    result = github_request(
+        '/contents/data/problems.json?ref=' + branch
+    )
+
+    content = result.get('content', '')
+    if not content:
+        raise RuntimeError('GitHub không trả về nội dung problems.json.')
+
+    data = json.loads(
+        base64.b64decode(content).decode('utf-8')
+    )
+
+    if not isinstance(data, list):
+        raise ValueError('Problems JSON phải là danh sách.')
+
+    return data, result['sha']
+
 
 def validate_problem(p):
     if not p.get('title') or not p.get('statement') or not p.get('subtasks'):
