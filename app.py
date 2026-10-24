@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -23,20 +24,59 @@ def load_problems(path):
         raise ValueError('Problems JSON phải là danh sách.')
 
     ids = set()
-
     for p in data:
         if p.get('id') in ids:
             raise ValueError('Trùng problem id: ' + str(p.get('id')))
-
         ids.add(p.get('id'))
 
         if sum(int(s['score']) for s in p['subtasks']) != int(p['total_score']):
-            raise ValueError('Điểm subtasks không khớp ' + p['id'])
+            raise ValueError('Điểm subtasks không khớp ' + str(p.get('id')))
 
         if not p['subtasks'] or any(not s.get('tests') for s in p['subtasks']):
-            raise ValueError('Subtask thiếu test ' + p['id'])
+            raise ValueError('Subtask thiếu test ' + str(p.get('id')))
 
     return data
+
+
+def save_problems(data, path):
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(target.suffix + '.tmp')
+    tmp.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+    tmp.replace(target)
+
+
+def validate_problem(p):
+    if not p.get('title') or not p.get('statement') or not p.get('subtasks'):
+        raise ValueError('Thiếu tiêu đề, đề bài hoặc subtasks.')
+
+    if int(p.get('total_score', 0)) <= 0:
+        raise ValueError('total_score phải dương.')
+
+    if sum(int(s['score']) for s in p['subtasks']) != int(p['total_score']):
+        raise ValueError('Tổng điểm subtasks phải bằng total_score.')
+
+    if any(not s.get('tests') for s in p['subtasks']):
+        raise ValueError('Mỗi subtask cần ít nhất một test.')
+
+
+def initialize_problem_file(app):
+    target = Path(app.config['PROBLEMS_PATH'])
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if target.exists():
+        return
+
+    source = Path(__file__).parent / 'data' / 'problems.json'
+
+    if source.exists():
+        if source.resolve() != target.resolve():
+            shutil.copy2(source, target)
+    else:
+        target.write_text('[]', encoding='utf-8')
 
 
 def create_app(test_config=None):
@@ -50,7 +90,7 @@ def create_app(test_config=None):
         ),
         PROBLEMS_PATH=os.getenv(
             'PROBLEMS_PATH',
-            str(Path(__file__).parent / 'data/problems.json')
+            str(Path(__file__).parent / 'data' / 'problems.json')
         ),
         JUDGE0_URL=os.getenv('JUDGE0_URL', 'https://ce.judge0.com'),
         JUDGE0_API_KEY=os.getenv('JUDGE0_API_KEY', ''),
@@ -63,9 +103,11 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     Path(app.config['DATABASE_PATH']).parent.mkdir(
-        parents=True, exist_ok=True
+        parents=True,
+        exist_ok=True
     )
 
+    initialize_problem_file(app)
     init_db(app.config['DATABASE_PATH'])
 
     if app.config.get('ADMIN_PASSWORD'):
@@ -102,8 +144,7 @@ def create_app(test_config=None):
 
         with connect(app.config['DATABASE_PATH']) as db:
             row = db.execute(
-                'SELECT id, username, is_admin, approved '
-                'FROM users WHERE id=?',
+                'SELECT id, username, is_admin, approved FROM users WHERE id=?',
                 (uid,)
             ).fetchone()
 
@@ -134,8 +175,10 @@ def create_app(test_config=None):
 
         if now < start:
             return 'upcoming'
+
         if now >= end:
             return 'ended'
+
         return 'running'
 
     def get_contest_data(contest_id, allow_hidden=False):
@@ -161,13 +204,16 @@ def create_app(test_config=None):
         item = dict(contest)
         item['is_visible'] = bool(item['is_visible'])
         item['problem_ids'] = [r['problem_id'] for r in ids]
+
         bank = {p['id']: p for p in problems()}
 
+        # ĐÃ SỬA: Mỗi bài có URL để mở trang đề bài.
         item['problems'] = [
             {
                 'id': pid,
                 'title': bank[pid].get('title', pid),
-                'total_score': bank[pid]['total_score']
+                'total_score': bank[pid]['total_score'],
+                'url': url_for('problem_page', pid=pid)
             }
             for pid in item['problem_ids']
             if pid in bank
@@ -274,7 +320,8 @@ def create_app(test_config=None):
             ).fetchone()
 
         if not row or not check_password_hash(
-            row['password_hash'], str(d.get('password', ''))
+            row['password_hash'],
+            str(d.get('password', ''))
         ):
             return jsonify(error='Sai tên đăng nhập hoặc mật khẩu.'), 401
 
@@ -370,11 +417,8 @@ def create_app(test_config=None):
         with connect(app.config['DATABASE_PATH']) as db:
             rows = db.execute(
                 '''SELECT id, problem_id, language_id, verdict,
-                          score, max_score, details_json, created_at,
-                          contest_id
-                   FROM submissions
-                   WHERE user_id=?
-                   ORDER BY id DESC LIMIT 200''',
+                          score, max_score, details_json, created_at, contest_id
+                   FROM submissions WHERE user_id=? ORDER BY id DESC LIMIT 200''',
                 (user['id'],)
             ).fetchall()
 
@@ -397,10 +441,8 @@ def create_app(test_config=None):
         with connect(app.config['DATABASE_PATH']) as db:
             row = db.execute(
                 '''SELECT id, problem_id, language_id, verdict,
-                          score, max_score, details_json, created_at,
-                          contest_id
-                   FROM submissions
-                   WHERE id=? AND user_id=?''',
+                          score, max_score, details_json, created_at, contest_id
+                   FROM submissions WHERE id=? AND user_id=?''',
                 (submission_id, user['id'])
             ).fetchone()
 
@@ -491,8 +533,7 @@ def create_app(test_config=None):
                 ).fetchall()
             else:
                 rows = db.execute(
-                    '''SELECT * FROM contests
-                       WHERE is_visible=1
+                    '''SELECT * FROM contests WHERE is_visible=1
                        ORDER BY start_time DESC, id DESC'''
                 ).fetchall()
 
@@ -509,8 +550,10 @@ def create_app(test_config=None):
     @app.get('/api/contests/<int:contest_id>')
     def api_contest_detail(contest_id):
         user = current_user()
-        allow_hidden = bool(user and user['is_admin'])
-        item = get_contest_data(contest_id, allow_hidden)
+        item = get_contest_data(
+            contest_id,
+            bool(user and user['is_admin'])
+        )
 
         if not item:
             return jsonify(error='Không tìm thấy cuộc thi.'), 404
@@ -530,9 +573,7 @@ def create_app(test_config=None):
             if not contest:
                 return jsonify(error='Không tìm thấy cuộc thi.'), 404
 
-            if not contest['is_visible'] and not (
-                user and user['is_admin']
-            ):
+            if not contest['is_visible'] and not (user and user['is_admin']):
                 return jsonify(error='Không tìm thấy cuộc thi.'), 404
 
             rows = db.execute(
@@ -541,14 +582,11 @@ def create_app(test_config=None):
                           COUNT(CASE WHEN best.solved=1 THEN 1 END) AS solved
                    FROM users u
                    LEFT JOIN (
-                       SELECT user_id, problem_id,
-                              MAX(score) AS score,
-                              MAX(CASE WHEN verdict='Accepted'
-                                       THEN 1 ELSE 0 END) AS solved
+                       SELECT user_id, problem_id, MAX(score) AS score,
+                              MAX(CASE WHEN verdict='Accepted' THEN 1 ELSE 0 END) AS solved
                        FROM submissions
                        WHERE contest_id=?
-                         AND verdict NOT IN
-                             ('Queued', 'Processing', 'Judge Unavailable')
+                         AND verdict NOT IN ('Queued', 'Processing', 'Judge Unavailable')
                        GROUP BY user_id, problem_id
                    ) best ON best.user_id=u.id
                    WHERE u.approved=1
@@ -583,8 +621,7 @@ def create_app(test_config=None):
 
         with connect(app.config['DATABASE_PATH']) as db:
             contest = db.execute(
-                '''SELECT * FROM contests
-                   WHERE id=? AND is_visible=1''',
+                'SELECT * FROM contests WHERE id=? AND is_visible=1',
                 (contest_id,)
             ).fetchone()
 
@@ -698,14 +735,15 @@ def create_app(test_config=None):
         with connect(app.config['DATABASE_PATH']) as db:
             cur = db.execute(
                 '''INSERT INTO contests
-                   (title, description, start_time, end_time,
-                    is_visible, created_by)
+                   (title, description, start_time, end_time, is_visible, created_by)
                    VALUES (?, ?, ?, ?, ?, ?)''',
                 (
-                    title, description,
+                    title,
+                    description,
                     start.isoformat(timespec='minutes'),
                     end.isoformat(timespec='minutes'),
-                    int(visible), admin['id']
+                    int(visible),
+                    admin['id']
                 )
             )
 
@@ -777,15 +815,15 @@ def create_app(test_config=None):
                 return jsonify(error='Không tìm thấy cuộc thi.'), 404
 
             db.execute(
-                '''UPDATE contests
-                   SET title=?, description=?, start_time=?,
-                       end_time=?, is_visible=?
-                   WHERE id=?''',
+                '''UPDATE contests SET title=?, description=?, start_time=?,
+                   end_time=?, is_visible=? WHERE id=?''',
                 (
-                    title, description,
+                    title,
+                    description,
                     start.isoformat(timespec='minutes'),
                     end.isoformat(timespec='minutes'),
-                    int(visible), contest_id
+                    int(visible),
+                    contest_id
                 )
             )
 
@@ -911,40 +949,18 @@ def create_app(test_config=None):
         return jsonify(ok=True)
 
     register_admin_routes(
-        app, connect, current_user, app.config['DATABASE_PATH']
+        app,
+        connect,
+        current_user,
+        app.config['DATABASE_PATH']
     )
 
     return app
 
 
-def validate_problem(p):
-    if not p.get('title') or not p.get('statement') or not p.get('subtasks'):
-        raise ValueError('Thiếu tiêu đề, đề bài hoặc subtasks.')
-
-    if int(p.get('total_score', 0)) <= 0:
-        raise ValueError('total_score phải dương.')
-
-    if sum(int(s['score']) for s in p['subtasks']) != int(p['total_score']):
-        raise ValueError('Tổng điểm subtasks phải bằng total_score.')
-
-    if any(not s.get('tests') for s in p['subtasks']):
-        raise ValueError('Mỗi subtask cần ít nhất một test.')
-
-
-def save_problems(data, path):
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-
-    tmp = target.with_suffix(target.suffix + '.tmp')
-    tmp.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
-    tmp.replace(target)
-
-
 app = create_app()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
+```
