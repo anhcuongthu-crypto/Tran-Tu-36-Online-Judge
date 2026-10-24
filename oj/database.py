@@ -71,7 +71,6 @@ def init_db(path):
         ON submissions(problem_id);
         """)
 
-        # Nâng cấp database cũ, không xóa dữ liệu hiện có.
         user_columns = {
             row['name']
             for row in db.execute(
@@ -114,4 +113,23 @@ def init_db(path):
         db.execute("""
             CREATE INDEX IF NOT EXISTS idx_submissions_contest
             ON submissions(contest_id, user_id, problem_id)
+        """)
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS contest_custom_problems(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                contest_id INTEGER NOT NULL
+                    REFERENCES contests(id) ON DELETE CASCADE,
+                problem_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                statement TEXT NOT NULL DEFAULT '',
+                input_desc TEXT NOT NULL DEFAULT '',
+                output_desc TEXT NOT NULL DEFAULT '',
+                subtasks_json TEXT NOT NULL DEFAULT '[]',
+                total_score REAL NOT NULL DEFAULT 10,
+                time_limit REAL NOT NULL DEFAULT 1,
+                memory_limit INTEGER NOT NULL DEFAULT 256000,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(contest_id, problem_id)
+            )
         """)
