@@ -334,7 +334,10 @@ def create_app(test_config=None):
                     'id': pid,
                     'title': p.get('title', pid),
                     'total_score': p['total_score'],
-                    'is_custom': False
+                    'is_custom': False,
+                    'statement': p.get('statement', ''),
+                    'input_desc': p.get('input_desc', ''),
+                    'output_desc': p.get('output_desc', '')
                 })
 
         item['state'] = contest_state(item)
