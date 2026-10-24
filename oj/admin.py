@@ -1,5 +1,5 @@
 
-"""Administrator-only account approval routes."""
+"""Administrator-only account and submission management routes."""
 
 from flask import jsonify
 
@@ -82,3 +82,62 @@ def register_admin_routes(app, connect, current_user, database_path):
             user_id=user_id,
             rejected=True
         )
+
+    # DANH SÁCH BÀI NỘP
+    @app.get('/api/admin/submissions')
+    def admin_submissions():
+        user = require_admin()
+        if not user:
+            return jsonify(error='Chỉ admin.'), 403
+
+        with connect(database_path) as db:
+            rows = db.execute(
+                '''
+                SELECT
+                    s.id,
+                    s.user_id,
+                    u.username,
+                    s.problem_id,
+                    s.language_id,
+                    s.verdict,
+                    s.score,
+                    s.max_score,
+                    s.created_at,
+                    s.contest_id
+                FROM submissions s
+                JOIN users u ON u.id = s.user_id
+                ORDER BY s.id DESC
+                LIMIT 200
+                '''
+            ).fetchall()
+
+        return jsonify([dict(row) for row in rows])
+
+    # XEM MÃ NGUỒN MỘT BÀI NỘP
+    @app.get('/api/admin/submissions/<int:submission_id>/source')
+    def admin_submission_source(submission_id):
+        user = require_admin()
+        if not user:
+            return jsonify(error='Chỉ admin.'), 403
+
+        with connect(database_path) as db:
+            row = db.execute(
+                '''
+                SELECT
+                    s.id,
+                    u.username,
+                    s.problem_id,
+                    s.language_id,
+                    s.source_code,
+                    s.created_at
+                FROM submissions s
+                JOIN users u ON u.id = s.user_id
+                WHERE s.id = ?
+                ''',
+                (submission_id,)
+            ).fetchone()
+
+        if not row:
+            return jsonify(error='Không tìm thấy bài nộp.'), 404
+
+        return jsonify(dict(row))
