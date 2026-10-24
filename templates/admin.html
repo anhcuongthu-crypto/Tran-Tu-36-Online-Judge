@@ -173,6 +173,10 @@
         <div id="admin-problem-count">Đang tải...</div>
 
         <div class="toolbar">
+            <button type="button" id="save-bank" class="success">
+                Lưu ngân hàng đề lên GitHub
+            </button>
+
             <button type="button" id="select-all" class="secondary">
                 Chọn tất cả
             </button>
@@ -185,6 +189,10 @@
                 Xóa bài đã chọn (0)
             </button>
         </div>
+
+        <p class="muted">
+            Nút lưu sẽ đồng bộ toàn bộ ngân hàng đề hiện tại lên GitHub.
+        </p>
 
         <div id="problem-list">Đang tải danh sách bài...</div>
     </section>
@@ -235,6 +243,7 @@
         const saveButton = document.getElementById('save-problem');
         const cancelButton = document.getElementById('cancel-edit');
 
+        const saveBankButton = document.getElementById('save-bank');
         const selectAllButton = document.getElementById('select-all');
         const deselectAllButton = document.getElementById('deselect-all');
         const deleteSelectedButton =
@@ -315,10 +324,36 @@
             return button;
         }
 
-        // =========================
-        // QUẢN LÝ TÀI KHOẢN
-        // =========================
+        // LƯU NGÂN HÀNG ĐỀ LÊN GITHUB
+        saveBankButton.addEventListener('click', async () => {
+            if (!confirm(
+                'Lưu toàn bộ ngân hàng đề hiện tại lên GitHub?'
+            )) {
+                return;
+            }
 
+            saveBankButton.disabled = true;
+            saveBankButton.textContent = 'Đang lưu...';
+
+            try {
+                const result = await api('/api/admin/problems/save', {
+                    method: 'POST'
+                });
+
+                alert(
+                    result.message ||
+                    `Đã lưu thành công ${result.count ?? ''} bài tập lên GitHub.`
+                );
+            } catch (error) {
+                alert('Lưu thất bại: ' + error.message);
+            } finally {
+                saveBankButton.disabled = false;
+                saveBankButton.textContent =
+                    'Lưu ngân hàng đề lên GitHub';
+            }
+        });
+
+        // QUẢN LÝ TÀI KHOẢN
         async function loadUsers() {
             usersList.textContent = 'Đang tải tài khoản...';
             showUserMessage('');
@@ -418,10 +453,7 @@
 
         refreshUsersButton.addEventListener('click', loadUsers);
 
-        // =========================
         // QUẢN LÝ BÀI TẬP
-        // =========================
-
         async function loadProblems() {
             list.textContent = 'Đang tải danh sách bài...';
 
