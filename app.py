@@ -233,6 +233,9 @@ def create_app(test_config=None):
                 )
 
     def problems():
+        if os.getenv('GITHUB_TOKEN'):
+            data, _ = github_read_problems()
+            return data
         return load_problems(app.config['PROBLEMS_PATH'])
 
     def current_user():
