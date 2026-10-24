@@ -840,6 +840,115 @@
         const addCustomProblemButton = document.getElementById('addCustomProblem');
 
         let pendingCustomProblems = [];
+        
+        function renderCustomProblemList() {
+            customProblemList.innerHTML = '';
+
+            pendingCustomProblems.forEach((p, i) => {
+                const item = document.createElement('div');
+                item.className = 'problem-item';
+
+                const title = document.createElement('span');
+                title.textContent = p.id + ' - ' + p.title;
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.textContent = 'Xóa';
+                remove.className = 'danger';
+
+                remove.addEventListener('click', () => {
+                    pendingCustomProblems.splice(i, 1);
+                    renderCustomProblemList();
+                });
+
+                item.appendChild(title);
+                item.appendChild(remove);
+                customProblemList.appendChild(item);
+            });
+        }
+
+        addCustomProblemButton.addEventListener('click', () => {
+            const id = customProblemId.value.trim();
+            const title = customProblemTitle.value.trim();
+            const statement = customProblemStatement.value.trim();
+
+            if (!id || !title || !statement) {
+                customProblemMessage.textContent =
+                    'Hãy nhập ID, tên bài và đề bài.';
+                return;
+            }
+
+            if (pendingCustomProblems.some(p => p.id === id)) {
+                customProblemMessage.textContent = 'ID bài bị trùng!';
+                return;
+            }
+
+            let subtasks;
+
+            try {
+                subtasks = JSON.parse(customProblemSubtasks.value);
+            } catch (e) {
+                customProblemMessage.textContent = 'JSON subtasks không hợp lệ!';
+                return;
+            }
+
+            if (!Array.isArray(subtasks) || subtasks.length === 0) {
+                customProblemMessage.textContent =
+                    'Phải có ít nhất một subtask!';
+                return;
+            }
+
+            for (const s of subtasks) {
+                if (!s.id || !s.name || !(Number(s.score) > 0) ||
+                    !Array.isArray(s.tests) || s.tests.length === 0) {
+                    customProblemMessage.textContent =
+                        'Subtask thiếu ID, tên, điểm hoặc test!';
+                    return;
+                }
+
+                for (const t of s.tests) {
+                    if (typeof t.input !== 'string' ||
+                        typeof t.output !== 'string') {
+                        customProblemMessage.textContent =
+                            'Mỗi test phải có input và output dạng chuỗi!';
+                        return;
+                    }
+                }
+            }
+
+            const score = Number(customProblemScore.value);
+            const time = Number(customProblemTime.value);
+            const memory = Number(customProblemMemory.value);
+
+            if (score <= 0 || time <= 0 || memory <= 0) {
+                customProblemMessage.textContent =
+                    'Điểm, thời gian và bộ nhớ phải lớn hơn 0!';
+                return;
+            }
+
+            pendingCustomProblems.push({
+                id: id,
+                title: title,
+                statement: statement,
+                input_desc: customProblemInput.value.trim(),
+                output_desc: customProblemOutput.value.trim(),
+                total_score: score,
+                time_limit: time,
+                memory_limit: memory,
+                subtasks: subtasks
+            });
+
+            customProblemMessage.textContent = 'Đã thêm bài vào danh sách chờ!';
+            renderCustomProblemList();
+
+            customProblemId.value = '';
+            customProblemTitle.value = '';
+            customProblemStatement.value = '';
+            customProblemInput.value = '';
+            customProblemOutput.value = '';
+            customProblemSubtasks.value = '';
+        });
+
         function showContestMessage(text, isError = false) {
             contestMessage.textContent = text;
             contestMessage.className = 'message ' +
