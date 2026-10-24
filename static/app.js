@@ -62,7 +62,7 @@ async function refresh() {
         const u = me.user;
 const authSection = document.querySelector('#auth-section');
 if (authSection) {
-    authSection.hidden = !!u;
+    authSection.style.display = u ? 'none' : 'grid';
 }
         const status = document.querySelector('#user-status');
         if (status) {
