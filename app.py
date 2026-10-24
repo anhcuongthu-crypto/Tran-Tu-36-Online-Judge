@@ -820,8 +820,34 @@ def create_app(test_config=None):
             db.execute('DELETE FROM contests WHERE id=?', (contest_id,))
         return jsonify(ok=True)
 
-    # ==================== ADMIN PROBLEM API ====================
+    # ==================== ADMIN PROBLEM API ===================
 
+    # Lưu ngân hàng đề lên GitHub thủ công
+    @app.post('/api/admin/problems/save')
+    def admin_save_problem_bank():
+        if not admin_required():
+            return jsonify(error='Chỉ admin.'), 403
+
+        if not all(os.getenv(key) for key in (
+            'GITHUB_TOKEN',
+            'GITHUB_OWNER',
+            'GITHUB_REPO'
+        )):
+            return jsonify(
+                error='Chưa cấu hình đủ GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO.'
+            ), 500
+
+        try:
+            data = problems()
+            save_problems(data, app.config['PROBLEMS_PATH'])
+
+            return jsonify(
+                ok=True,
+                count=len(data),
+                message=f'Đã lưu thành công {len(data)} bài tập lên GitHub.'
+            )
+        except Exception as e:
+            return jsonify(error=str(e)), 500
     @app.get('/api/admin/problems')
     def admin_list():
         if not admin_required():
