@@ -60,7 +60,10 @@ async function refresh() {
     try {
         const me = await api('/api/me');
         const u = me.user;
-
+const authSection = document.querySelector('#auth-section');
+if (authSection) {
+    authSection.hidden = !!u;
+}
         const status = document.querySelector('#user-status');
         if (status) {
             status.textContent = u
