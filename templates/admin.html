@@ -1001,6 +1001,104 @@
         loadContestProblems();
         loadContestList();
 
+        // QUẢN LÝ BÀI NỘP VÀ XEM MÃ NGUỒN
+        const submissionsList = document.getElementById('submissions-list');
+        const sourcePanel = document.getElementById('source-panel');
+        const sourceTitle = document.getElementById('source-title');
+        const sourceCode = document.getElementById('source-code');
+
+        async function loadSubmissions() {
+            submissionsList.textContent = 'Đang tải bài nộp...';
+
+            try {
+                const submissions = await api('/api/admin/submissions');
+                submissionsList.replaceChildren();
+
+                if (!Array.isArray(submissions) || submissions.length === 0) {
+                    submissionsList.textContent = 'Chưa có bài nộp nào.';
+                    return;
+                }
+
+                for (const s of submissions) {
+                    const row = document.createElement('div');
+                    row.className = 'section-heading';
+
+                    const info = document.createElement('div');
+                    info.style.flex = '1';
+
+                    const heading = document.createElement('h3');
+                    heading.textContent =
+                        `#${s.id} — ${s.username} — ${s.problem_id}`;
+
+                    const detail = document.createElement('p');
+                    detail.className = 'muted';
+                    detail.textContent =
+                        `${s.language_id} · ${s.verdict} · ` +
+                        `${s.score}/${s.max_score} điểm · ` +
+                        `${s.created_at || ''}`;
+
+                    info.append(heading, detail);
+
+                    const button = makeButton(
+                        'Mã nguồn',
+                        'secondary',
+                        async () => {
+                            button.disabled = true;
+
+                            try {
+                                const data = await api(
+                                    `/api/admin/submissions/${s.id}/source`
+                                );
+
+                                sourceTitle.textContent =
+                                    `Bài #${data.id} — ${data.username} — ` +
+                                    `${data.problem_id} (${data.language_id})`;
+
+                                sourceCode.textContent = data.source_code || '';
+                                sourcePanel.hidden = false;
+                                sourcePanel.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'start'
+                                });
+                            } catch (error) {
+                                alert('Lỗi tải mã nguồn: ' + error.message);
+                            } finally {
+                                button.disabled = false;
+                            }
+                        }
+                    );
+
+                    row.append(info, button);
+                    submissionsList.appendChild(row);
+                }
+            } catch (error) {
+                submissionsList.textContent =
+                    'Lỗi tải bài nộp: ' + error.message;
+            }
+        }
+
+        document.getElementById('refresh-submissions')
+            .addEventListener('click', loadSubmissions);
+
+        document.getElementById('close-source')
+            .addEventListener('click', () => {
+                sourcePanel.hidden = true;
+            });
+
+        document.getElementById('copy-source')
+            .addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(
+                        sourceCode.textContent
+                    );
+                    alert('Đã sao chép mã nguồn.');
+                } catch {
+                    alert('Không sao chép được. Hãy sao chép thủ công.');
+                }
+            });
+
+        loadSubmissions();
+
         // Tải cả tài khoản và ngân hàng đề khi mở trang.
         loadUsers();
         loadProblems();
