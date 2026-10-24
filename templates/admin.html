@@ -1114,13 +1114,13 @@
                 return;
             }
 
-            if (problemIds.length === 0) {
-                showContestMessage(
-                    'Hãy chọn ít nhất một bài tập.',
-                    true
-                );
-                return;
-            }
+          if (problemIds.length === 0 && pendingCustomProblems.length === 0) {
+    showContestMessage(
+        'Hãy chọn ít nhất một bài từ ngân hàng hoặc thêm bài riêng.',
+        true
+    );
+    return;
+}
 
             const button = document.querySelector(
                 'button[onclick="createContest()"]'
