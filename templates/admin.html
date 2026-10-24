@@ -168,6 +168,22 @@
 
     <!-- NGÂN HÀNG BÀI TẬP -->
     <section class="panel">
+    <h2>Bài nộp học sinh</h2>
+
+    <button type="button" id="refresh-submissions">
+        Tải lại bài nộp
+    </button>
+
+    <div id="submissions-list">Đang tải bài nộp...</div>
+
+    <div id="source-panel" hidden>
+        <h3 id="source-title">Mã nguồn</h3>
+        <pre id="source-code" style="white-space:pre-wrap;overflow:auto;background:#111827;color:white;padding:16px;border-radius:8px;"></pre>
+        <button type="button" id="copy-source">Sao chép mã nguồn</button>
+        <button type="button" id="close-source">Đóng</button>
+    </div>
+</section>
+    <section class="panel">
         <h2>Ngân hàng đề</h2>
 
         <div id="admin-problem-count">Đang tải...</div>
