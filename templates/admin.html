@@ -765,6 +765,226 @@
 
         cancelButton.addEventListener('click', resetEditor);
 
+        // QUẢN LÝ CONTEST
+        const contestProblems = document.getElementById('contestProblems');
+        const contestList = document.getElementById('contestList');
+        const contestMessage = document.getElementById('contestMessage');
+
+        function showContestMessage(text, isError = false) {
+            contestMessage.textContent = text;
+            contestMessage.className = 'message ' +
+                (isError ? 'error-message' : 'success-message');
+        }
+
+        async function loadContestProblems() {
+            contestProblems.textContent = 'Đang tải bài tập...';
+
+            try {
+                const problems = await api('/api/admin/problems');
+                contestProblems.replaceChildren();
+
+                if (!Array.isArray(problems) || problems.length === 0) {
+                    contestProblems.textContent = 'Chưa có bài tập nào.';
+                    return;
+                }
+
+                for (const problem of problems) {
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    label.style.margin = '8px 0';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'contest-problem-checkbox';
+                    checkbox.value = String(problem.id);
+
+                    label.append(
+                        checkbox,
+                        document.createTextNode(
+                            ` ${problem.id} — ${problem.title}`
+                        )
+                    );
+
+                    contestProblems.appendChild(label);
+                }
+            } catch (error) {
+                contestProblems.textContent =
+                    'Không tải được bài tập: ' + error.message;
+            }
+        }
+
+        async function loadContestList() {
+            contestList.textContent = 'Đang tải Contest...';
+
+            try {
+                const result = await api('/api/admin/contests');
+                const contests = Array.isArray(result)
+                    ? result
+                    : (result.contests || result.items || []);
+
+                contestList.replaceChildren();
+
+                if (contests.length === 0) {
+                    contestList.textContent = 'Chưa có Contest nào.';
+                    return;
+                }
+
+                for (const contest of contests) {
+                    const panel = document.createElement('div');
+                    panel.className = 'section-heading';
+
+                    const info = document.createElement('div');
+                    info.style.flex = '1';
+
+                    const heading = document.createElement('h3');
+                    heading.textContent =
+                        `${contest.title || 'Contest'} (#${contest.id})`;
+
+                    const description = document.createElement('p');
+                    description.className = 'muted';
+                    description.textContent =
+                        contest.description || 'Không có mô tả';
+
+                    const times = document.createElement('p');
+                    times.className = 'muted';
+                    times.style.marginTop = '6px';
+                    times.textContent =
+                        `Bắt đầu: ${contest.start_time || 'Chưa rõ'} | ` +
+                        `Kết thúc: ${contest.end_time || 'Chưa rõ'}`;
+
+                    const visibility = document.createElement('p');
+                    visibility.className = 'muted';
+                    visibility.textContent =
+                        contest.is_visible === false
+                            ? 'Đang ẩn'
+                            : 'Đang hiển thị';
+
+                    info.append(heading, description, times, visibility);
+
+                    const actions = document.createElement('div');
+
+                    actions.appendChild(makeButton(
+                        'Xóa Contest',
+                        'danger',
+                        async () => {
+                            if (!confirm(
+                                `Xóa Contest "${contest.title}" (#${contest.id})?`
+                            )) {
+                                return;
+                            }
+
+                            try {
+                                await api(
+                                    `/api/admin/contests/${contest.id}`,
+                                    { method: 'DELETE' }
+                                );
+
+                                showContestMessage('Đã xóa Contest.');
+                                await loadContestList();
+                            } catch (error) {
+                                showContestMessage(
+                                    'Không xóa được Contest: ' + error.message,
+                                    true
+                                );
+                            }
+                        }
+                    ));
+
+                    panel.append(info, actions);
+                    contestList.appendChild(panel);
+                }
+            } catch (error) {
+                contestList.textContent =
+                    'Không tải được Contest: ' + error.message;
+            }
+        }
+
+        async function createContest() {
+            const title = document.getElementById('contestTitle').value.trim();
+            const description =
+                document.getElementById('contestDescription').value.trim();
+            const startTime =
+                document.getElementById('contestStart').value;
+            const endTime =
+                document.getElementById('contestEnd').value;
+            const isVisible =
+                document.getElementById('contestVisible').checked;
+
+            const problemIds = Array.from(
+                document.querySelectorAll('.contest-problem-checkbox:checked')
+            ).map(checkbox => checkbox.value);
+
+            if (!title) {
+                showContestMessage('Hãy nhập tên Contest.', true);
+                return;
+            }
+
+            if (!startTime || !endTime) {
+                showContestMessage(
+                    'Hãy chọn thời gian bắt đầu và kết thúc.',
+                    true
+                );
+                return;
+            }
+
+            if (new Date(endTime) <= new Date(startTime)) {
+                showContestMessage(
+                    'Thời gian kết thúc phải sau thời gian bắt đầu.',
+                    true
+                );
+                return;
+            }
+
+            if (problemIds.length === 0) {
+                showContestMessage(
+                    'Hãy chọn ít nhất một bài tập.',
+                    true
+                );
+                return;
+            }
+
+            const button = document.querySelector(
+                'button[onclick="createContest()"]'
+            );
+
+            button.disabled = true;
+            button.textContent = 'Đang tạo...';
+
+            try {
+                await api('/api/admin/contests', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        start_time: startTime,
+                        end_time: endTime,
+                        is_visible: isVisible,
+                        problem_ids: problemIds
+                    })
+                });
+
+                showContestMessage('Đã tạo Contest thành công!');
+
+                document.getElementById('contestTitle').value = '';
+                document.getElementById('contestDescription').value = '';
+                document.getElementById('contestStart').value = '';
+                document.getElementById('contestEnd').value = '';
+
+                await loadContestList();
+            } catch (error) {
+                showContestMessage(
+                    'Tạo Contest thất bại: ' + error.message,
+                    true
+                );
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Tạo Contest';
+            }
+        }
+
+        loadContestProblems();
+        loadContestList();
+
         // Tải cả tài khoản và ngân hàng đề khi mở trang.
         loadUsers();
         loadProblems();
