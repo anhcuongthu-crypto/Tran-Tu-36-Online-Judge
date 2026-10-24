@@ -690,12 +690,36 @@ def create_app(test_config=None):
             return jsonify(error='Cuộc thi đã kết thúc.'), 403
         if not member:
             return jsonify(error='Bài này không thuộc cuộc thi.'), 403
-        p = next((x for x in problems() if x['id'] == pid), None)
+       
+        with connect(app.config['DATABASE_PATH']) as db:
+            row = db.execute(
+                '''SELECT * FROM contest_custom_problems
+                   WHERE contest_id=? AND problem_id=?''',
+                (contest_id, pid)
+            ).fetchone()
+
+        if row:
+            p = {
+                'id': row['problem_id'],
+                'title': row['title'],
+                'statement': row['statement'],
+                'input_desc': row['input_desc'],
+                'output_desc': row['output_desc'],
+                'subtasks': json.loads(row['subtasks_json']),
+                'total_score': row['total_score'],
+                'time_limit': row['time_limit'],
+                'memory_limit': row['memory_limit']
+            }
+        else:
+            p = next((x for x in problems() if str(x['id']) == pid), None)
+
         if not p:
             return jsonify(error='Không tìm thấy bài.'), 404
+
         job_id, submission_id = enqueue(
             app, user['id'], p, code, language, contest_id=contest_id
         )
+
         return jsonify(
             submission_id=submission_id,
             job_id=job_id,
