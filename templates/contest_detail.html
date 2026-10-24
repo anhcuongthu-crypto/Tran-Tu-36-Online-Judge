@@ -220,8 +220,15 @@ function showProblem(problemId) {
     </div>
   `;
 
-  $('contestHeader').insertAdjacentHTML('afterend', content);
+let box = document.getElementById('problemDetail');
+
+if (!box) {
+  box = document.createElement('div');
+  box.id = 'problemDetail';
+  $('contestHeader').insertAdjacentElement('afterend', box);
 }
+
+box.innerHTML = content;}
 
 async function loadLeaderboard() {
   const box = $('leaderboard');
