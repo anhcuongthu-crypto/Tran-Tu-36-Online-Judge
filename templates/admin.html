@@ -826,7 +826,20 @@
         const contestProblems = document.getElementById('contestProblems');
         const contestList = document.getElementById('contestList');
         const contestMessage = document.getElementById('contestMessage');
+        const customProblemId = document.getElementById('customProblemId');
+        const customProblemTitle = document.getElementById('customProblemTitle');
+        const customProblemStatement = document.getElementById('customProblemStatement');
+        const customProblemInput = document.getElementById('customProblemInput');
+        const customProblemOutput = document.getElementById('customProblemOutput');
+        const customProblemScore = document.getElementById('customProblemScore');
+        const customProblemTime = document.getElementById('customProblemTime');
+        const customProblemMemory = document.getElementById('customProblemMemory');
+        const customProblemSubtasks = document.getElementById('customProblemSubtasks');
+        const customProblemMessage = document.getElementById('customProblemMessage');
+        const customProblemList = document.getElementById('customProblemList');
+        const addCustomProblemButton = document.getElementById('addCustomProblem');
 
+let pendingCustomProblems = [];
         function showContestMessage(text, isError = false) {
             contestMessage.textContent = text;
             contestMessage.className = 'message ' +
