@@ -1,37 +1,10 @@
-
-    
-  
-        "tests": [
-          {
-            "input": "b\n",
-            "output": "YES\n"
-          },
-          {
-            "input": "abbbab\n",
-            "output": "NO\n"
-          },
-          {
-            "input": "cbabcacacbc\n",
-            "output": "NO\n"
-          },
-          {
-            "input": "acc\n",
-            "output": "NO\n"
-          },
-          {
-            "input": "babcbabbcacacacac\n",
-            "output": "NO\n"
-          }
-        ]
-      }
-    ]
-  },
+[
   {
-    "id": "P461",
-    "title": "Ký tự khác nhau — mức 1",
+    "id": "P001",
+    "title": "Tổng hai số — mức 1",
     "category": "Cơ bản",
     "difficulty": "Dễ",
-    "statement": "Cho một dòng văn bản. Đếm số ký tự khác nhau phân biệt hoa thường, kể cả dấu cách.",
+    "statement": "Cho hai số nguyên a, b. In tổng a+b.",
     "input_format": "Dữ liệu theo mô tả đề bài.",
     "output_format": "In kết quả theo yêu cầu.",
     "total_score": 100,
@@ -44,121 +17,30 @@
         "score": 100,
         "tests": [
           {
-            "input": "ABaC3 CbC3bAa3  \n",
-            "output": "7\n"
+            "input": "-465 57\n",
+            "output": "-408\n"
           },
           {
-            "input": "b3a2cBbcC2a1\n",
-            "output": "8\n"
+            "input": "-494 940\n",
+            "output": "446\n"
           },
           {
-            "input": "C33\n",
-            "output": "2\n"
+            "input": "873 679\n",
+            "output": "1552\n"
           },
           {
-            "input": "1bC1Aba \n",
-            "output": "6\n"
+            "input": "-992 10\n",
+            "output": "-982\n"
           },
           {
-            "input": "12CBC1 a B2CBc33\n",
-            "output": "8\n"
+            "input": "-342 -878\n",
+            "output": "-1220\n"
           }
         ]
       }
-    ]
-  },
-  {
-    "id": "P469",
-    "title": "Đếm chữ hoa — mức 1",
-    "category": "Số học",
-    "difficulty": "Dễ",
-    "statement": "Cho một dòng văn bản. Đếm số chữ cái Latin in hoa.",
-    "input_format": "Dữ liệu theo mô tả đề bài.",
-    "output_format": "In kết quả theo yêu cầu.",
-    "total_score": 100,
-    "time_limit": 1.0,
-    "memory_limit": 256000,
-    "subtasks": [
-      {
-        "id": "full",
-        "name": "Toàn bộ dữ liệu",
-        "score": 100,
-        "tests": [
-          {
-            "input": "21\n",
-            "output": "0\n"
-          },
-          {
-            "input": "X1Z2ZYbXYZZcZYb a\n",
-            "output": "10\n"
-          },
-          {
-            "input": "bZXabb\n",
-            "output": "2\n"
-          },
-          {
-            "input": "2c2   XZ\n",
-            "output": "2\n"
-          },
-          {
-            "input": "X1Xccb3 X bXZ3aa\n",
-            "output": "5\n"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "P477",
-    "title": "Đổi dấu cách — mức 1",
-    "category": "Mảng",
-    "difficulty": "Dễ",
-    "statement": "Cho một dòng văn bản. Thay mỗi dấu cách bằng dấu gạch dưới _ rồi in kết quả.",
-    "input_format": "Dữ liệu theo mô tả đề bài.",
-    "output_format": "In kết quả theo yêu cầu.",
-    "total_score": 100,
-    "time_limit": 1.0,
-    "memory_limit": 256000,
-    "subtasks": [
-      {
-        "id": "full",
-        "name": "Toàn bộ dữ liệu",
-        "score": 100,
-        "tests": [
-          {
-            "input": "a1 2a 11a22b21\n",
-            "output": "a1_2a_11a22b21\n"
-          },
-          {
-            "input": "2c2b212a\n",
-            "output": "2c2b212a\n"
-          },
-          {
-            "input": "2aabaccc\n",
-            "output": "2aabaccc\n"
-          },
-          {
-            "input": "c1ab a2b2ac21b112c1 2\n",
-            "output": "c1ab_a2b2ac21b112c1_2\n"
-          },
-          {
-            "input": "b2c212c1cb\n",
-            "output": "b2c212c1cb\n"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "P485",
-    "title": "Xóa chữ số — mức 1",
-    "category": "Xâu",
-    "difficulty": "Dễ",
-    "statement": "Cho một dòng văn bản. In lại dòng sau khi xóa tất cả chữ số 0..9.",
-    "input_format": "Dữ liệu theo mô tả đề bài.",
-    "output_format": "In kết quả theo yêu cầu.",
-    "total_score": 100,
-    "time_limit": 1.0,
-    "memory_limit": 256000,
-    "subtasks": [
-
+    ],
+    "sample_input": "-465 57\n",
+    "sample_output": "-408\n",
+    "explanation": "Thực hiện phép cộng: -465 + (57) = -408."
+  }
+]
