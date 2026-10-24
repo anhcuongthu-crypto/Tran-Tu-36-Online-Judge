@@ -427,6 +427,10 @@ def create_app(test_config=None):
         if not current_user():
             return redirect(url_for('home'))
         return render_template('profile.html')
+   
+    @app.get('/submissions')
+    def submissions_page():
+        return render_template('submissions.html')
 
     @app.get('/about')
     def about_page():
