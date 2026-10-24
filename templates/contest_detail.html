@@ -204,31 +204,38 @@ function showProblem(problemId) {
     return;
   }
 
-  const content = `
-    <div class="panel">
-      <h2>${escapeHTML(p.title)}</h2>
-      <p class="muted">Mã bài: ${escapeHTML(p.id)}</p>
-      <h3>Đề bài</h3>
-      <div style="white-space:pre-wrap;line-height:1.7">${escapeHTML(p.statement || 'Chưa có đề bài.')}</div>
-      <h3>Input</h3>
-      <div style="white-space:pre-wrap;line-height:1.7">${escapeHTML(p.input_desc || 'Không có mô tả.')}</div>
-      <h3>Output</h3>
-      <div style="white-space:pre-wrap;line-height:1.7">${escapeHTML(p.output_desc || 'Không có mô tả.')}</div>
-      <button onclick="document.getElementById('problemId').value = '${escapeHTML(p.id)}'; document.getElementById('submitForm').scrollIntoView({behavior:'smooth'});">
-        Nộp bài này
-      </button>
-    </div>
+  let box = document.getElementById('problemDetail');
+
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'problemDetail';
+    box.className = 'panel';
+    $('problems').insertAdjacentElement('afterend', box);
+  }
+
+  box.innerHTML = `
+    <h2>${escapeHTML(p.title || 'Bài thi')}</h2>
+    <p class="muted">Mã bài: ${escapeHTML(p.id)}</p>
+
+    <h3>Đề bài</h3>
+    <div style="white-space:pre-wrap;line-height:1.8">${escapeHTML(p.statement || 'Dữ liệu đề bài chưa được API trả về.')}</div>
+
+    <h3>Input</h3>
+    <div style="white-space:pre-wrap;line-height:1.8">${escapeHTML(p.input_desc || 'Chưa có mô tả Input.')}</div>
+
+    <h3>Output</h3>
+    <div style="white-space:pre-wrap;line-height:1.8">${escapeHTML(p.output_desc || 'Chưa có mô tả Output.')}</div>
+
+    <button id="submitThisProblem">Nộp bài này</button>
   `;
 
-let box = document.getElementById('problemDetail');
+  document.getElementById('submitThisProblem').onclick = () => {
+    $('problemId').value = String(p.id);
+    $('submitForm').scrollIntoView({ behavior: 'smooth' });
+  };
 
-if (!box) {
-  box = document.createElement('div');
-  box.id = 'problemDetail';
-  $('contestHeader').insertAdjacentElement('afterend', box);
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
-box.innerHTML = content;}
 
 async function loadLeaderboard() {
   const box = $('leaderboard');
