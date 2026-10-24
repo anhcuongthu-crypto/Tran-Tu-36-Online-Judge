@@ -1,243 +1,509 @@
 
-{% extends 'base.html' %}
-{% block title %}Quản trị — OJ Studio{% endblock %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý bài tập</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 16px;
+            background: #f5f7fb;
+            color: #222;
+        }
 
-{% block content %}
-<section class="hero admin-hero">
-  <span class="eyebrow">ADMIN CONTROL CENTER</span>
-  <h1>Trung tâm quản trị</h1>
-  <p>Quản lý tài khoản và ngân hàng đề.</p>
-</section>
+        h1, h2, h3 {
+            margin-top: 0;
+        }
 
-<section class="glass-card">
-  <div class="section-heading">
-    <div>
-      <h2>Yêu cầu tài khoản</h2>
-      <p class="muted">Chỉ duyệt học sinh đã liên hệ Trần Tuấn Tú.</p>
-    </div>
-    <button id="reload-users" class="button button-glass">↻ Tải lại</button>
-  </div>
-  <div id="admin-users">Đang tải...</div>
-</section>
+        button {
+            padding: 9px 14px;
+            margin: 4px;
+            border: 0;
+            border-radius: 7px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+        }
 
-<section class="glass-card">
-  <div class="section-heading">
-    <div>
-      <h2>Ngân hàng đề</h2>
-      <p class="muted">Thêm, sửa và xoá bài tập.</p>
-    </div>
-    <a class="button button-primary" href="/">Mở danh sách bài ↗</a>
-  </div>
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-  <div id="admin-problem-count">Đang tải...</div>
-  <div id="problem-list">Đang tải danh sách bài...</div>
-</section>
+        .danger {
+            background: #dc2626;
+        }
 
-<section class="glass-card" id="problem-editor">
-  <h2 id="editor-title">Thêm bài mới</h2>
-  <p class="muted">
-    Nhập toàn bộ dữ liệu bài theo định dạng JSON.
-    Tổng điểm subtasks phải bằng total_score và mỗi subtask cần ít nhất một test.
-  </p>
+        .secondary {
+            background: #64748b;
+        }
 
-  <form id="problem-form">
-    <label for="problem-json">Dữ liệu bài tập (JSON)</label>
-    <textarea
-      id="problem-json"
-      rows="22"
-      required
-      spellcheck="false"
-      style="width:100%;font-family:monospace"
-      placeholder='{"id":"BAI01","title":"Tên bài","statement":"Đề bài","total_score":10,"subtasks":[...]}'
-    ></textarea>
+        .panel {
+            background: white;
+            padding: 20px;
+            margin: 18px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px #0000000d;
+        }
 
-    <p id="problem-message" role="status" aria-live="polite"></p>
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 14px 0;
+        }
 
-    <button type="submit" class="button button-primary" id="save-problem">
-      Thêm bài
-    </button>
-    <button type="button" class="button button-glass" id="cancel-edit">
-      Huỷ sửa
-    </button>
-  </form>
-</section>
+        .problem-info {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            flex: 1;
+        }
 
-<script>
-(() => {
-  const list = document.getElementById('problem-list');
-  const count = document.getElementById('admin-problem-count');
-  const form = document.getElementById('problem-form');
-  const editor = document.getElementById('problem-json');
-  const message = document.getElementById('problem-message');
-  const title = document.getElementById('editor-title');
-  const saveButton = document.getElementById('save-problem');
-  const cancelButton = document.getElementById('cancel-edit');
+        .problem-info input {
+            margin-top: 5px;
+            width: 18px;
+            height: 18px;
+        }
 
-  let editingId = null;
+        .problem-info h3 {
+            margin-bottom: 6px;
+        }
 
-  async function api(url, options = {}) {
-    const response = await fetch(url, {
-      credentials: 'same-origin',
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      }
-    });
+        .muted {
+            color: #64748b;
+            margin: 0;
+        }
 
-    const data = await response.json().catch(() => ({}));
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            box-sizing: border-box;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: Consolas, monospace;
+            font-size: 14px;
+        }
 
-    if (!response.ok) {
-      throw new Error(data.error || `Lỗi HTTP ${response.status}`);
-    }
+        #problem-message {
+            margin: 12px 0;
+            white-space: pre-wrap;
+        }
 
-    return data;
-  }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
 
-  function showMessage(text, error = false) {
-    message.textContent = text;
-    message.style.color = error ? '#dc2626' : '';
-  }
-
-  function resetEditor() {
-    editingId = null;
-    form.reset();
-    title.textContent = 'Thêm bài mới';
-    saveButton.textContent = 'Thêm bài';
-    cancelButton.hidden = true;
-    showMessage('');
-  }
-
-  function makeButton(text, className, handler) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = className;
-    button.textContent = text;
-    button.addEventListener('click', handler);
-    return button;
-  }
-
-  async function loadProblems() {
-    list.textContent = 'Đang tải danh sách bài...';
-
-    try {
-      const problems = await api('/api/admin/problems');
-
-      count.textContent = `Tổng số bài: ${problems.length}`;
-      list.replaceChildren();
-
-      if (!problems.length) {
-        list.textContent = 'Chưa có bài tập nào.';
-        return;
-      }
-
-      for (const problem of problems) {
-        const row = document.createElement('div');
-        row.className = 'section-heading';
-        row.style.marginTop = '16px';
-
-        const info = document.createElement('div');
-        const heading = document.createElement('h3');
-        heading.textContent = `${problem.id} — ${problem.title}`;
-
-        const detail = document.createElement('p');
-        detail.className = 'muted';
-        detail.textContent =
-          `${problem.total_score} điểm · ${problem.subtasks.length} subtasks`;
-
-        info.append(heading, detail);
-
-        const actions = document.createElement('div');
-        actions.append(
-          makeButton('Sửa', 'button button-glass', () => {
-            editingId = problem.id;
-            editor.value = JSON.stringify(problem, null, 2);
-            title.textContent = `Sửa bài ${problem.id}`;
-            saveButton.textContent = 'Lưu thay đổi';
-            cancelButton.hidden = false;
-            showMessage('');
-            document.getElementById('problem-editor').scrollIntoView({
-              behavior: 'smooth'
-            });
-          }),
-          makeButton('Xoá', 'button button-glass', async () => {
-            if (!confirm(`Xoá bài "${problem.id} — ${problem.title}"?`)) {
-              return;
+        @media (max-width: 600px) {
+            .section-heading {
+                align-items: flex-start;
             }
+
+            .section-heading > div:last-child {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Quản lý bài tập</h1>
+
+    <section class="panel">
+        <h2>Ngân hàng đề</h2>
+
+        <div id="admin-problem-count">Đang tải...</div>
+
+        <div class="toolbar">
+            <button type="button" id="select-all" class="secondary">
+                Chọn tất cả
+            </button>
+
+            <button type="button" id="deselect-all" class="secondary">
+                Bỏ chọn
+            </button>
+
+            <button type="button" id="delete-selected" class="danger" disabled>
+                Xóa bài đã chọn (0)
+            </button>
+        </div>
+
+        <div id="problem-list">Đang tải danh sách bài...</div>
+    </section>
+
+    <section class="panel">
+        <h2 id="editor-title">Thêm bài tập</h2>
+
+        <form id="problem-form">
+            <label for="problem-json">
+                Nội dung bài tập dạng JSON
+            </label>
+
+            <p class="muted">
+                Dán toàn bộ JSON của một bài tập vào ô dưới đây.
+            </p>
+
+            <textarea id="problem-json" required
+                placeholder='{"id":"BAI1","title":"Tên bài", ...}'></textarea>
+
+            <div id="problem-message"></div>
+
+            <button type="submit" id="save-problem">
+                Thêm bài tập
+            </button>
+
+            <button type="button" id="cancel-edit" class="secondary"
+                hidden>
+                Hủy sửa
+            </button>
+        </form>
+    </section>
+
+    <script>
+        const list = document.getElementById('problem-list');
+        const count = document.getElementById('admin-problem-count');
+        const form = document.getElementById('problem-form');
+        const editor = document.getElementById('problem-json');
+        const message = document.getElementById('problem-message');
+        const title = document.getElementById('editor-title');
+        const saveButton = document.getElementById('save-problem');
+        const cancelButton = document.getElementById('cancel-edit');
+
+        const selectAllButton = document.getElementById('select-all');
+        const deselectAllButton = document.getElementById('deselect-all');
+        const deleteSelectedButton = document.getElementById('delete-selected');
+
+        let editingId = null;
+        const selectedIds = new Set();
+
+        async function api(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
+            });
+
+            const text = await response.text();
+            let data = {};
 
             try {
-              await api(
-                `/api/admin/problems/${encodeURIComponent(problem.id)}`,
-                { method: 'DELETE' }
-              );
-
-              if (editingId === problem.id) resetEditor();
-              await loadProblems();
-            } catch (error) {
-              alert(error.message);
+                data = text ? JSON.parse(text) : {};
+            } catch {
+                data = { message: text };
             }
-          })
-        );
 
-        row.append(info, actions);
-        list.append(row);
-      }
-    } catch (error) {
-      list.textContent = error.message;
-      count.textContent = 'Không tải được ngân hàng đề.';
-    }
-  }
+            if (!response.ok) {
+                throw new Error(
+                    data.error || data.message || `Lỗi HTTP ${response.status}`
+                );
+            }
 
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-
-    let problem;
-
-    try {
-      problem = JSON.parse(editor.value);
-    } catch {
-      showMessage('JSON không hợp lệ. Kiểm tra dấu ngoặc và dấu phẩy.', true);
-      return;
-    }
-
-    if (!problem || typeof problem !== 'object' || Array.isArray(problem)) {
-      showMessage('Dữ liệu phải là một đối tượng JSON.', true);
-      return;
-    }
-
-    if (editingId !== null) {
-      problem.id = editingId;
-    }
-
-    saveButton.disabled = true;
-    showMessage('Đang lưu...');
-
-    try {
-      const isEditing = editingId !== null;
-
-      await api(
-        isEditing
-          ? `/api/admin/problems/${encodeURIComponent(editingId)}`
-          : '/api/admin/problems',
-        {
-          method: isEditing ? 'PUT' : 'POST',
-          body: JSON.stringify(problem)
+            return data;
         }
-      );
 
-      resetEditor();
-      await loadProblems();
-      showMessage(isEditing ? 'Đã cập nhật bài.' : 'Đã thêm bài.');
-    } catch (error) {
-      showMessage(error.message, true);
-    } finally {
-      saveButton.disabled = false;
-    }
-  });
+        function showMessage(text, isError = false) {
+            message.textContent = text;
+            message.style.color = isError ? '#dc2626' : '#15803d';
+        }
 
-  cancelButton.addEventListener('click', resetEditor);
+        function resetEditor() {
+            editingId = null;
+            editor.value = '';
+            title.textContent = 'Thêm bài tập';
+            saveButton.textContent = 'Thêm bài tập';
+            cancelButton.hidden = true;
+            showMessage('');
+        }
 
-  loadProblems();
-})();
-</script>
-{% endblock %}
+        function updateSelectedCount() {
+            const n = selectedIds.size;
+
+            deleteSelectedButton.textContent = `Xóa bài đã chọn (${n})`;
+            deleteSelectedButton.disabled = n === 0;
+        }
+
+        function makeButton(text, className, onClick) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = text;
+            button.className = className;
+            button.addEventListener('click', onClick);
+            return button;
+        }
+
+        async function loadProblems() {
+            list.textContent = 'Đang tải danh sách bài...';
+
+            try {
+                const problems = await api('/api/admin/problems');
+
+                // Bỏ các ID không còn tồn tại khỏi danh sách đã chọn.
+                const existingIds = new Set(
+                    problems.map(problem => String(problem.id))
+                );
+
+                for (const id of selectedIds) {
+                    if (!existingIds.has(String(id))) {
+                        selectedIds.delete(id);
+                    }
+                }
+
+                count.textContent = `Tổng số bài: ${problems.length}`;
+                list.replaceChildren();
+
+                if (problems.length === 0) {
+                    list.textContent = 'Chưa có bài tập nào.';
+                    updateSelectedCount();
+                    return;
+                }
+
+                for (const problem of problems) {
+                    const row = document.createElement('div');
+                    row.className = 'section-heading';
+
+                    const info = document.createElement('div');
+                    info.className = 'problem-info';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = selectedIds.has(String(problem.id));
+                    checkbox.setAttribute(
+                        'aria-label',
+                        `Chọn bài ${problem.title}`
+                    );
+
+                    checkbox.addEventListener('change', () => {
+                        const id = String(problem.id);
+
+                        if (checkbox.checked) {
+                            selectedIds.add(id);
+                        } else {
+                            selectedIds.delete(id);
+                        }
+
+                        updateSelectedCount();
+                    });
+
+                    const textInfo = document.createElement('div');
+
+                    const heading = document.createElement('h3');
+                    heading.textContent = `${problem.id} — ${problem.title}`;
+
+                    const detail = document.createElement('p');
+                    detail.className = 'muted';
+                    detail.textContent =
+                        `${problem.total_score} điểm · ` +
+                        `${(problem.subtasks || []).length} subtasks`;
+
+                    textInfo.append(heading, detail);
+                    info.append(checkbox, textInfo);
+
+                    const actions = document.createElement('div');
+
+                    actions.append(
+                        makeButton('Sửa', 'secondary', () => {
+                            editingId = String(problem.id);
+                            editor.value = JSON.stringify(problem, null, 2);
+                            title.textContent = `Sửa bài ${problem.id}`;
+                            saveButton.textContent = 'Lưu thay đổi';
+                            cancelButton.hidden = false;
+                            showMessage('');
+                            editor.focus();
+                            window.scrollTo({
+                                top: document.body.scrollHeight,
+                                behavior: 'smooth'
+                            });
+                        }),
+
+                        makeButton('Xóa', 'danger', async () => {
+                            if (!confirm(
+                                `Mày có chắc muốn xóa bài "${problem.title}"?`
+                            )) {
+                                return;
+                            }
+
+                            try {
+                                await api(
+                                    `/api/admin/problems/${encodeURIComponent(problem.id)}`,
+                                    { method: 'DELETE' }
+                                );
+
+                                selectedIds.delete(String(problem.id));
+
+                                if (editingId === String(problem.id)) {
+                                    resetEditor();
+                                }
+
+                                await loadProblems();
+                                showMessage('Đã xóa bài tập.');
+                            } catch (error) {
+                                alert(`Không xóa được bài: ${error.message}`);
+                            }
+                        })
+                    );
+
+                    row.append(info, actions);
+                    list.append(row);
+                }
+
+                updateSelectedCount();
+            } catch (error) {
+                list.textContent = error.message;
+                count.textContent = 'Không tải được ngân hàng đề.';
+            }
+        }
+
+        selectAllButton.addEventListener('click', async () => {
+            try {
+                const problems = await api('/api/admin/problems');
+
+                selectedIds.clear();
+
+                for (const problem of problems) {
+                    selectedIds.add(String(problem.id));
+                }
+
+                await loadProblems();
+            } catch (error) {
+                alert(`Không tải được danh sách: ${error.message}`);
+            }
+        });
+
+        deselectAllButton.addEventListener('click', () => {
+            selectedIds.clear();
+            loadProblems();
+        });
+
+        deleteSelectedButton.addEventListener('click', async () => {
+            const ids = [...selectedIds];
+
+            if (ids.length === 0) {
+                alert('Mày chưa chọn bài nào.');
+                return;
+            }
+
+            const confirmed = confirm(
+                `CẢNH BÁO: Mày sắp xóa ${ids.length} bài tập.\n\n` +
+                'Thao tác này không thể hoàn tác. Mày có chắc không?'
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            deleteSelectedButton.disabled = true;
+            selectAllButton.disabled = true;
+            deselectAllButton.disabled = true;
+
+            let deleted = 0;
+            const errors = [];
+
+            try {
+                for (const id of ids) {
+                    try {
+                        await api(
+                            `/api/admin/problems/${encodeURIComponent(id)}`,
+                            { method: 'DELETE' }
+                        );
+
+                        selectedIds.delete(id);
+                        deleted++;
+                    } catch (error) {
+                        errors.push(`${id}: ${error.message}`);
+                    }
+                }
+
+                await loadProblems();
+
+                if (errors.length === 0) {
+                    alert(`Đã xóa thành công ${deleted} bài tập.`);
+                } else {
+                    alert(
+                        `Đã xóa ${deleted}/${ids.length} bài.\n\n` +
+                        'Các bài chưa xóa được:\n' + errors.join('\n')
+                    );
+                }
+            } catch (error) {
+                alert(
+                    `Đã xóa ${deleted} bài trước khi xảy ra lỗi: ` +
+                    error.message
+                );
+                await loadProblems();
+            } finally {
+                selectAllButton.disabled = false;
+                deselectAllButton.disabled = false;
+                updateSelectedCount();
+            }
+        });
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+
+            let problem;
+
+            try {
+                problem = JSON.parse(editor.value);
+            } catch (error) {
+                showMessage(`JSON không hợp lệ: ${error.message}`, true);
+                return;
+            }
+
+            if (!problem || typeof problem !== 'object' || Array.isArray(problem)) {
+                showMessage('Dữ liệu phải là một đối tượng JSON.', true);
+                return;
+            }
+
+            saveButton.disabled = true;
+
+            try {
+                if (editingId !== null) {
+                    problem.id = editingId;
+
+                    await api(
+                        `/api/admin/problems/${encodeURIComponent(editingId)}`,
+                        {
+                            method: 'PUT',
+                            body: JSON.stringify(problem)
+                        }
+                    );
+
+                    showMessage('Đã cập nhật bài tập.');
+                } else {
+                    await api('/api/admin/problems', {
+                        method: 'POST',
+                        body: JSON.stringify(problem)
+                    });
+
+                    showMessage('Đã thêm bài tập.');
+                }
+
+                resetEditor();
+                await loadProblems();
+            } catch (error) {
+                showMessage(`Không lưu được: ${error.message}`, true);
+            } finally {
+                saveButton.disabled = false;
+            }
+        });
+
+        cancelButton.addEventListener('click', resetEditor);
+
+        loadProblems();
+    </script>
+
+</body>
+</html>
