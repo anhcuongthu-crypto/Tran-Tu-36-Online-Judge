@@ -196,6 +196,33 @@ $('problems').innerHTML = problemList.map((p, i) => {
   }
 }
 
+function showProblem(problemId) {
+  const p = problemList.find(x => String(x.id) === String(problemId));
+
+  if (!p) {
+    alert('Không tìm thấy bài thi.');
+    return;
+  }
+
+  const content = `
+    <div class="panel">
+      <h2>${escapeHTML(p.title)}</h2>
+      <p class="muted">Mã bài: ${escapeHTML(p.id)}</p>
+      <h3>Đề bài</h3>
+      <div style="white-space:pre-wrap;line-height:1.7">${escapeHTML(p.statement || 'Chưa có đề bài.')}</div>
+      <h3>Input</h3>
+      <div style="white-space:pre-wrap;line-height:1.7">${escapeHTML(p.input_desc || 'Không có mô tả.')}</div>
+      <h3>Output</h3>
+      <div style="white-space:pre-wrap;line-height:1.7">${escapeHTML(p.output_desc || 'Không có mô tả.')}</div>
+      <button onclick="document.getElementById('problemId').value = '${escapeHTML(p.id)}'; document.getElementById('submitForm').scrollIntoView({behavior:'smooth'});">
+        Nộp bài này
+      </button>
+    </div>
+  `;
+
+  $('contestHeader').insertAdjacentHTML('afterend', content);
+}
+
 async function loadLeaderboard() {
   const box = $('leaderboard');
 
