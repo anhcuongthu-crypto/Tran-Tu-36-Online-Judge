@@ -1,4 +1,4 @@
-
+```html
 {% extends 'base.html' %}
 
 {% block title %}{{ problem.id }} · {{ problem.title }} — OJ Studio{% endblock %}
@@ -71,16 +71,10 @@
             {% for s in problem.subtasks %}
                 <div class="subtask-row">
                     <span>
-                        <b>
-                            {{ s.name }} ({{ s.score }}% số điểm)
-                        </b>
+                        <b>{{ s.name }}</b>
 
-                        {% if s.id == 'sub1' %}
-                            <small>n ≤ 100, Ai ≤ 10³</small>
-                        {% elif s.id == 'sub2' %}
-                            <small>n ≤ 100, Ai ≤ 10¹²</small>
-                        {% else %}
-                            <small>Giới hạn theo đề bài</small>
+                        {% if s.constraints %}
+                            <small>{{ s.constraints }}</small>
                         {% endif %}
                     </span>
 
@@ -135,3 +129,4 @@ int main() {
     </aside>
 </div>
 {% endblock %}
+```
