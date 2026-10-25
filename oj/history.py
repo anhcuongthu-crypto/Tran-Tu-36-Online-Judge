@@ -1,7 +1,7 @@
 
 import json
 import re
-import sqlite3
+from oj.database import connect
 import unicodedata
 from datetime import datetime
 
