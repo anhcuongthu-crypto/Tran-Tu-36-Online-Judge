@@ -141,3 +141,42 @@ def register_admin_routes(app, connect, current_user, database_path):
             return jsonify(error='Không tìm thấy bài nộp.'), 404
 
         return jsonify(dict(row))
+
+
+    # SAO LUU DATABASE - CHI ADMIN
+    @app.get('/api/admin/backup')
+    def admin_backup_database():
+        user = require_admin()
+        if not user:
+            return jsonify(error='Chỉ admin.'), 403
+
+        tables = [
+            'users',
+            'submissions',
+            'solves',
+            'contests',
+            'contest_problems',
+            'contest_custom_problems',
+            'problem_history'
+        ]
+
+        backup = {}
+
+        with connect(database_path) as db:
+            existing = {
+                row['name']
+                for row in db.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+
+            for table in tables:
+                if table in existing:
+                    rows = db.execute(
+                        'SELECT * FROM "' + table + '"'
+                    ).fetchall()
+                    backup[table] = [dict(row) for row in rows]
+                else:
+                    backup[table] = []
+
+        return jsonify(format='tran-tu-36-backup-v1', tables=backup)
