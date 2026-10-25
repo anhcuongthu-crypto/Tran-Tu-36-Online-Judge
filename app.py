@@ -281,10 +281,13 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
         return 'running'
 
     
+
+
     def get_contest_data(contest_id, allow_hidden=False):
         with connect(app.config['DATABASE_PATH']) as db:
             contest = db.execute(
-                'SELECT * FROM contests WHERE id=?', (contest_id,)
+                'SELECT * FROM contests WHERE id=?',
+                (contest_id,)
             ).fetchone()
 
             if not contest:
@@ -300,14 +303,14 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                 (contest_id,)
             ).fetchall()
 
-        custom_rows = db.execute(
-    '''SELECT problem_id, title, statement,
-              input_desc, output_desc, total_score,
-              sample_input, sample_output
-       FROM contest_custom_problems
-       WHERE contest_id=?''',
-    (contest_id,)
-).fetchall()
+            custom_rows = db.execute(
+                '''SELECT problem_id, title, statement,
+                          input_desc, output_desc, total_score,
+                          sample_input, sample_output
+                   FROM contest_custom_problems
+                   WHERE contest_id=?''',
+                (contest_id,)
+            ).fetchall()
 
         item = dict(contest)
         item['is_visible'] = bool(item['is_visible'])
@@ -333,8 +336,11 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     'is_custom': True,
                     'statement': p['statement'],
                     'input_desc': p['input_desc'],
-                    'output_desc': p['output_desc']
+                    'output_desc': p['output_desc'],
+                    'sample_input': p['sample_input'] or '',
+                    'sample_output': p['sample_output'] or ''
                 })
+
             elif pid in bank:
                 p = bank[pid]
                 item['problems'].append({
@@ -344,11 +350,14 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     'is_custom': False,
                     'statement': p.get('statement', ''),
                     'input_desc': p.get('input_desc', ''),
-                    'output_desc': p.get('output_desc', '')
+                    'output_desc': p.get('output_desc', ''),
+                    'sample_input': p.get('sample_input', ''),
+                    'sample_output': p.get('sample_output', '')
                 })
 
         item['state'] = contest_state(item)
         return item
+
     @app.get('/health')
     def health():
         try:
