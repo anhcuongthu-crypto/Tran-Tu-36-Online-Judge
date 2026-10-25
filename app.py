@@ -405,7 +405,7 @@ def create_app(test_config=None):
                 db.execute(
                     '''INSERT INTO users
                        (username, password_hash, is_admin, approved)
-                       VALUES (?, ?, 0, 0)''',
+                       VALUES (?, ?, 0, 1)''',
                     (username, generate_password_hash(password))
                 )
         except Exception:
