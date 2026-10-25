@@ -411,8 +411,8 @@ def create_app(test_config=None):
         except Exception:
             return jsonify(error='Tên đăng nhập đã tồn tại.'), 409
         return jsonify(
-            status='pending_approval',
-            message='Đăng ký đã được ghi nhận. Hãy chờ quản trị viên duyệt.'
+            status='approved',
+            message='Đăng ký thành công! Bạn có thể đăng nhập ngay.'
         ), 202
 
     @app.post('/api/login')
