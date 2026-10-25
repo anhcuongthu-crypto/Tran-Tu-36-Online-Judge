@@ -773,6 +773,7 @@ sampleOutput.value = firstTest?.output ?? '';
             }
         });
 
+
         form.addEventListener('submit', async event => {
             event.preventDefault();
 
@@ -781,24 +782,16 @@ sampleOutput.value = firstTest?.output ?? '';
             try {
                 problem = JSON.parse(editor.value);
             } catch (error) {
-                showMessage(
-                    `JSON không hợp lệ: ${error.message}`,
-                    true
-                );
+                showMessage('JSON không hợp lệ: ' + error.message, true);
                 return;
             }
 
-            if (
-                !problem ||
-                typeof problem !== 'object' ||
-                Array.isArray(problem)
-            ) {
-                showMessage(
-                    'Dữ liệu phải là một đối tượng JSON.',
-                    true
-                );
+            if (!problem || typeof problem !== 'object' ||
+                Array.isArray(problem)) {
+                showMessage('Dữ liệu phải là một object JSON.', true);
                 return;
             }
+
             if (sampleInput.value !== '' || sampleOutput.value !== '') {
                 if (!Array.isArray(problem.subtasks) ||
                     problem.subtasks.length === 0) {
@@ -821,9 +814,6 @@ sampleOutput.value = firstTest?.output ?? '';
                 }
             }
 
-            saveButton.disabled = true;
-
-            try {
             saveButton.disabled = true;
 
             try {
@@ -852,16 +842,11 @@ sampleOutput.value = firstTest?.output ?? '';
                     showMessage('Đã thêm bài tập.');
                 }
             } catch (error) {
-                showMessage(
-                    `Không lưu được: ${error.message}`,
-                    true
-                );
+                showMessage('Không lưu được: ' + error.message, true);
             } finally {
                 saveButton.disabled = false;
             }
         });
-
-        cancelButton.addEventListener('click', resetEditor);
 
         // QUẢN LÝ CONTEST
         const contestProblems = document.getElementById('contestProblems');
