@@ -192,23 +192,6 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
     init_db(db_path)
     initialize_history(db_path)
 
-    # Nâng cấp bảng lịch sử cũ nếu thiếu các cột thống kê.
-    with sqlite3.connect(app.config['DATABASE_PATH']) as history_db:
-        columns = {
-            row[1] for row in history_db.execute(
-                'PRAGMA table_info(problem_history)'
-            ).fetchall()
-        }
-        for column, definition in (
-            ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
-            ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
-            ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
-        ):
-            if column not in columns:
-                history_db.execute(
-                    f'ALTER TABLE problem_history ADD COLUMN {column} {definition}'
-                )
-
     if app.config.get('ADMIN_PASSWORD'):
         with connect(app.config['DATABASE_PATH']) as db:
             row = db.execute(
