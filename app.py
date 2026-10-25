@@ -168,14 +168,10 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY=os.getenv('SECRET_KEY', 'dev-change-me'),
-        DATABASE_PATH=os.getenv(
-            'DATABASE_PATH',
-            str(Path(app.instance_path) / 'online_judge.sqlite3')
-        ),
-        PROBLEMS_PATH=os.getenv(
-            'PROBLEMS_PATH',
-            str(Path(__file__).parent / 'data' / 'problems.json')
-        ),
+DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
+    'DATABASE_PATH',
+    str(Path(app.instance_path) / 'online_judge.sqlite3')
+),
         JUDGE0_URL=os.getenv('JUDGE0_URL', 'https://ce.judge0.com'),
         JUDGE0_API_KEY=os.getenv('JUDGE0_API_KEY', ''),
         ADMIN_USERNAME=os.getenv('ADMIN_USERNAME', 'admin'),
@@ -186,12 +182,14 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
-    Path(app.config['DATABASE_PATH']).parent.mkdir(
-        parents=True, exist_ok=True
-    )
-    initialize_problem_file(app)
-    init_db(app.config['DATABASE_PATH'])
-    initialize_history(app.config['DATABASE_PATH'])
+db_path = app.config['DATABASE_PATH']
+
+if not db_path.startswith(('postgres://', 'postgresql://')):
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
+initialize_problem_file(app)
+init_db(db_path)
+initialize_history(db_path)
 
     # Nâng cấp bảng lịch sử cũ nếu thiếu các cột thống kê.
     with sqlite3.connect(app.config['DATABASE_PATH']) as history_db:
