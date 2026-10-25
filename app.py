@@ -179,17 +179,18 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
         TESTING=False
     )
 
+
     if test_config:
         app.config.update(test_config)
 
-db_path = app.config['DATABASE_PATH']
+    db_path = app.config['DATABASE_PATH']
 
-if not db_path.startswith(('postgres://', 'postgresql://')):
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    if not db_path.startswith(('postgres://', 'postgresql://')):
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-initialize_problem_file(app)
-init_db(db_path)
-initialize_history(db_path)
+    initialize_problem_file(app)
+    init_db(db_path)
+    initialize_history(db_path)
 
     # Nâng cấp bảng lịch sử cũ nếu thiếu các cột thống kê.
     with sqlite3.connect(app.config['DATABASE_PATH']) as history_db:
