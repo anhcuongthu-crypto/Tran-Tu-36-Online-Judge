@@ -25,7 +25,7 @@ def remove_duplicates(data):
     for problem in data:
         key = normalize_statement(problem.get('statement', ''))
 
-        # Không tự động coi các bài không có đề là trùng.
+        # Không tự động coi bài không có đề là trùng.
         if not key:
             kept.append(problem)
         elif key not in seen:
@@ -39,10 +39,11 @@ def remove_duplicates(data):
 
 def initialize_history(db_path):
     """
-    Bảng problem_history được tạo và nâng cấp bởi init_db()
+    Bảng problem_history được tạo bởi init_db()
     trong oj/database.py.
-    Hàm này giữ lại để tương thích với app.py.
     """
+    # Đảm bảo hàm cũ trong app.py vẫn gọi được.
+    # Không tạo bảng bằng cú pháp riêng của SQLite.
     return None
 
 
@@ -109,12 +110,12 @@ def get_history(db_path, limit=100, offset=0):
             (limit, offset)
         ).fetchall()
 
-        total = db.execute(
-            'SELECT COUNT(*) FROM problem_history'
-        ).fetchone()[0]
+        count_row = db.execute(
+            'SELECT COUNT(*) AS total FROM problem_history'
+        ).fetchone()
 
     return {
-        'total': total,
+        'total': count_row['total'],
         'items': [dict(row) for row in rows]
     }
 
@@ -146,7 +147,7 @@ def get_history_detail(db_path, history_id):
 def restore_history_data(db_path, history_id):
     """
     Lấy trạng thái trước thao tác để phục vụ khôi phục.
-    Hàm này KHÔNG tự ghi đè file JSON.
+    Không tự ghi đè file JSON.
     """
     detail = get_history_detail(db_path, history_id)
 
