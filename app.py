@@ -989,10 +989,67 @@ def create_app(test_config=None):
 
         return jsonify(ok=True, id=contest_id), 201
 
+
     @app.put('/api/admin/contests/<int:contest_id>')
     def admin_update_contest(contest_id):
         if not admin_required():
             return jsonify(error='Chỉ admin.'), 403
+
+        d = request.get_json(silent=True) or {}
+        title = str(d.get('title', '')).strip()
+        description = str(d.get('description', '')).strip()
+        visible = d.get('is_visible', True)
+
+        if not title or len(title) > 160:
+            return jsonify(error='Tên cuộc thi không hợp lệ.'), 400
+
+        if len(description) > 5000:
+            return jsonify(error='Mô tả tối đa 5000 ký tự.'), 400
+
+        if not isinstance(visible, bool):
+            return jsonify(error='Trạng thái hiển thị không hợp lệ.'), 400
+
+        try:
+            start = parse_contest_time(d.get('start_time'))
+            end = parse_contest_time(d.get('end_time'))
+
+            if end <= start:
+                return jsonify(
+                    error='Thời gian kết thúc phải sau thời gian bắt đầu.'
+                ), 400
+        except (ValueError, TypeError) as exc:
+            return jsonify(error=str(exc)), 400
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            exists = db.execute(
+                'SELECT id FROM contests WHERE id=?',
+                (contest_id,)
+            ).fetchone()
+
+            if not exists:
+                return jsonify(error='Không tìm thấy cuộc thi.'), 404
+
+            db.execute(
+                '''UPDATE contests
+                   SET title=?, description=?, start_time=?,
+                       end_time=?, is_visible=?
+                   WHERE id=?''',
+                (
+                    title,
+                    description,
+                    start.isoformat(timespec='minutes'),
+                    end.isoformat(timespec='minutes'),
+                    int(visible),
+                    contest_id
+                )
+            )
+
+        return jsonify(
+            ok=True,
+            id=contest_id,
+            message='Đã cập nhật thông tin Contest.'
+        )
+
         d = request.get_json(silent=True) or {}
         title = str(d.get('title', '')).strip()
         description = str(d.get('description', '')).strip()
