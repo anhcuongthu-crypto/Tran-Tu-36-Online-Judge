@@ -192,14 +192,12 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
         Path(app.config['DATABASE_PATH']).parent.mkdir(
             parents=True, exist_ok=True
         )
+
     initialize_problem_file(app)
     init_db(app.config['DATABASE_PATH'])
     initialize_history(app.config['DATABASE_PATH'])
 
-
-    # Nâng cấp bảng lịch sử cũ nếu thiếu các cột thống kê.
-    initialize_history(app.config['DATABASE_PATH'])
-
+    # Nâng cấp các cột thống kê của bảng lịch sử.
     with sqlite3.connect(app.config['DATABASE_PATH']) as history_db:
         columns = {
             row[1] for row in history_db.execute(
@@ -216,31 +214,6 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                 history_db.execute(
                     f'ALTER TABLE problem_history ADD COLUMN {column} {definition}'
                 )
-            for column, definition in (
-                ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
-                ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
-                ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
-            ):
-                history_db.execute(
-                    f'ALTER TABLE problem_history '
-                    f'ADD COLUMN IF NOT EXISTS {column} {definition}'
-                )
-        else:
-            columns = {
-                row[1] for row in history_db.execute(
-                    'PRAGMA table_info(problem_history)'
-                ).fetchall()
-            }
-            for column, definition in (
-                ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
-                ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
-                ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
-            ):
-                if column not in columns:
-                    history_db.execute(
-                        f'ALTER TABLE problem_history '
-                        f'ADD COLUMN {column} {definition}'
-                    )
 
 
     if app.config.get('ADMIN_PASSWORD'):
