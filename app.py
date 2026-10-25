@@ -225,15 +225,6 @@ def create_app(test_config=None):
                         f'ADD COLUMN {column} {definition}'
                     )
 
-        for column, definition in (
-            ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
-            ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
-            ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
-        ):
-            if column not in columns:
-                history_db.execute(
-                    f'ALTER TABLE problem_history ADD COLUMN {column} {definition}'
-                )
 
     if app.config.get('ADMIN_PASSWORD'):
         with connect(app.config['DATABASE_PATH']) as db:
