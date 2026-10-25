@@ -1050,62 +1050,7 @@ def create_app(test_config=None):
             message='Đã cập nhật thông tin Contest.'
         )
 
-        d = request.get_json(silent=True) or {}
-        title = str(d.get('title', '')).strip()
-        description = str(d.get('description', '')).strip()
-        problem_ids = d.get('problem_ids', [])
-        visible = bool(d.get('is_visible', True))
-        if not title or len(title) > 160:
-            return jsonify(error='Tên cuộc thi không hợp lệ.'), 400
-        if len(description) > 5000:
-            return jsonify(error='Mô tả tối đa 5000 ký tự.'), 400
-        if not isinstance(problem_ids, list) or not problem_ids:
-            return jsonify(error='Chọn ít nhất một bài thi.'), 400
-        try:
-            start = parse_contest_time(d.get('start_time'))
-            end = parse_contest_time(d.get('end_time'))
-            if end <= start:
-                return jsonify(
-                    error='Thời gian kết thúc phải sau thời gian bắt đầu.'
-                ), 400
-            bank = {p['id'] for p in problems()}
-            ids = []
-            for value in problem_ids:
-                pid = str(value)
-                if pid not in bank:
-                    return jsonify(error='Không tìm thấy bài: ' + pid), 400
-                if pid not in ids:
-                    ids.append(pid)
-        except (ValueError, TypeError) as exc:
-            return jsonify(error=str(exc)), 400
-        with connect(app.config['DATABASE_PATH']) as db:
-            exists = db.execute(
-                'SELECT id FROM contests WHERE id=?',
-                (contest_id,)
-            ).fetchone()
-            if not exists:
-                return jsonify(error='Không tìm thấy cuộc thi.'), 404
-            db.execute(
-                '''UPDATE contests SET title=?, description=?, start_time=?,
-                   end_time=?, is_visible=? WHERE id=?''',
-                (
-                    title, description,
-                    start.isoformat(timespec='minutes'),
-                    end.isoformat(timespec='minutes'),
-                    int(visible), contest_id
-                )
-            )
-            db.execute(
-                'DELETE FROM contest_problems WHERE contest_id=?',
-                (contest_id,)
-            )
-            db.executemany(
-                '''INSERT INTO contest_problems
-                   (contest_id, problem_id, position)
-                   VALUES (?, ?, ?)''',
-                [(contest_id, pid, i) for i, pid in enumerate(ids)]
-            )
-        return jsonify(ok=True, id=contest_id)
+
 
     @app.delete('/api/admin/contests/<int:contest_id>')
     def admin_delete_contest(contest_id):
