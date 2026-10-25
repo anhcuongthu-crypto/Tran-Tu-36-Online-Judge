@@ -1,9 +1,10 @@
 
 import json
 import re
-from oj.database import connect
 import unicodedata
 from datetime import datetime
+
+from oj.database import connect
 
 
 def normalize_statement(value):
@@ -37,23 +38,12 @@ def remove_duplicates(data):
 
 
 def initialize_history(db_path):
-    """Tạo bảng lịch sử nếu chưa tồn tại."""
-    with sqlite3.connect(db_path) as db:
-        db.execute(
-            '''
-            CREATE TABLE IF NOT EXISTS problem_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at TEXT NOT NULL,
-                action TEXT NOT NULL,
-                before_json TEXT NOT NULL,
-                after_json TEXT NOT NULL,
-                removed_json TEXT NOT NULL,
-                before_count INTEGER NOT NULL,
-                after_count INTEGER NOT NULL,
-                removed_count INTEGER NOT NULL
-            )
-            '''
-        )
+    """
+    Bảng problem_history được tạo và nâng cấp bởi init_db()
+    trong oj/database.py.
+    Hàm này giữ lại để tương thích với app.py.
+    """
+    return None
 
 
 def save_history(
@@ -67,7 +57,7 @@ def save_history(
     if removed is None:
         removed = []
 
-    with sqlite3.connect(db_path) as db:
+    with connect(db_path) as db:
         cur = db.execute(
             '''
             INSERT INTO problem_history (
@@ -102,9 +92,7 @@ def get_history(db_path, limit=100, offset=0):
     limit = max(1, min(int(limit), 500))
     offset = max(0, int(offset))
 
-    with sqlite3.connect(db_path) as db:
-        db.row_factory = sqlite3.Row
-
+    with connect(db_path) as db:
         rows = db.execute(
             '''
             SELECT
@@ -133,9 +121,7 @@ def get_history(db_path, limit=100, offset=0):
 
 def get_history_detail(db_path, history_id):
     """Lấy đầy đủ dữ liệu trước/sau của một bản ghi."""
-    with sqlite3.connect(db_path) as db:
-        db.row_factory = sqlite3.Row
-
+    with connect(db_path) as db:
         row = db.execute(
             '''
             SELECT *
