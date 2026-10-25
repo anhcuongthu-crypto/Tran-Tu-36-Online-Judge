@@ -738,6 +738,100 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             status='Queued',
             message='Đã nhận bài thi. Đang chấm...'
         ), 202
+    
+    # SỬA NỘI DUNG BÀI RIÊNG TRONG CONTEST
+    @app.put('/api/admin/contests/<int:contest_id>/problems/<pid>')
+    def admin_update_contest_problem(contest_id, pid):
+        admin = admin_required()
+        if not admin:
+            return jsonify(error='Chỉ admin.'), 403
+
+        d = request.get_json(silent=True) or {}
+
+        title = str(d.get('title', '')).strip()
+        statement = str(d.get('statement', '')).strip()
+        input_desc = str(d.get('input_desc', '')).strip()
+        output_desc = str(d.get('output_desc', '')).strip()
+        subtasks = d.get('subtasks')
+
+        if not title or not statement:
+            return jsonify(error='Tên bài và đề bài không được để trống.'), 400
+
+        if not isinstance(subtasks, list) or not subtasks:
+            return jsonify(error='Phải có ít nhất một subtask.'), 400
+
+        try:
+            total_score = float(d.get('total_score', 0))
+            time_limit = float(d.get('time_limit', 1))
+            memory_limit = int(d.get('memory_limit', 256000))
+
+            if total_score <= 0 or time_limit <= 0 or memory_limit <= 0:
+                raise ValueError()
+
+            score_sum = 0
+            subtask_ids = set()
+
+            for s in subtasks:
+                if not isinstance(s, dict):
+                    raise ValueError()
+
+                sid = str(s.get('id', '')).strip()
+                name = str(s.get('name', '')).strip()
+                score = float(s.get('score', 0))
+                tests = s.get('tests')
+
+                if (not sid or not name or score <= 0
+                        or sid in subtask_ids
+                        or not isinstance(tests, list) or not tests):
+                    raise ValueError()
+
+                subtask_ids.add(sid)
+                score_sum += score
+
+                for t in tests:
+                    if (not isinstance(t, dict)
+                            or not isinstance(t.get('input'), str)
+                            or not isinstance(t.get('output'), str)):
+                        raise ValueError()
+
+            if abs(score_sum - total_score) > 1e-9:
+                return jsonify(
+                    error='Tổng điểm các subtask phải bằng total_score.'
+                ), 400
+
+        except (ValueError, TypeError, OverflowError):
+            return jsonify(error='Dữ liệu subtask hoặc giới hạn không hợp lệ.'), 400
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            row = db.execute(
+                '''SELECT problem_id FROM contest_custom_problems
+                   WHERE contest_id=? AND problem_id=?''',
+                (contest_id, pid)
+            ).fetchone()
+
+            if not row:
+                return jsonify(
+                    error='Không tìm thấy bài riêng trong contest.'
+                ), 404
+
+            db.execute(
+                '''UPDATE contest_custom_problems
+                   SET title=?, statement=?, input_desc=?, output_desc=?,
+                       subtasks_json=?, total_score=?, time_limit=?,
+                       memory_limit=?
+                   WHERE contest_id=? AND problem_id=?''',
+                (
+                    title, statement, input_desc, output_desc,
+                    json.dumps(subtasks, ensure_ascii=False),
+                    total_score, time_limit, memory_limit,
+                    contest_id, pid
+                )
+            )
+
+        return jsonify(
+            ok=True,
+            message='Đã cập nhật bài riêng trong contest.'
+        )
 
     # ==================== ADMIN CONTEST API ====================
 
