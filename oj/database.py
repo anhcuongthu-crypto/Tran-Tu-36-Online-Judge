@@ -6,7 +6,11 @@ from pathlib import Path
 
 def is_postgres(path=None):
     value = path or os.getenv('DATABASE_URL', '')
-    return value.startswith(('postgres://', 'postgresql://'))
+    return value.startswith((
+        'postgres://',
+        'postgresql://',
+        'postgresql+psycopg://'
+    ))
 
 
 class PostgresConnection:
