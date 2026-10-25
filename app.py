@@ -236,16 +236,20 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
         return user if user and user['is_admin'] else None
 
     def parse_contest_time(value):
-        if not isinstance(value, str) or not value.strip():
+        if isinstance(value, datetime):
+            result = value
+        elif isinstance(value, str) and value.strip():
+            try:
+                result = datetime.fromisoformat(value.strip())
+            except ValueError:
+                raise ValueError('Thời gian không hợp lệ.')
+        else:
             raise ValueError('Thiếu thời gian bắt đầu hoặc kết thúc.')
-        try:
-            result = datetime.fromisoformat(value.strip())
-        except ValueError:
-            raise ValueError('Thời gian không hợp lệ.')
+
         if result.tzinfo is not None:
             raise ValueError('Hãy nhập thời gian địa phương.')
-        return result
 
+        return result
     def contest_state(contest):
         now = datetime.now()
         start = parse_contest_time(contest['start_time'])
