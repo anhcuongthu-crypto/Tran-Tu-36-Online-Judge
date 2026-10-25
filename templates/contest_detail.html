@@ -240,20 +240,32 @@ function showProblem(pid) {
     $('problems').insertAdjacentElement('afterend', box);
   }
 
-  box.innerHTML = `
+box.innerHTML = `
     <h2>${esc(p.title)}</h2>
     <p class="muted">ID: ${esc(p.id)} · ${Number(p.total_score) || 0} điểm</p>
+
     <h3>Đề bài</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.statement || 'API chưa cung cấp nội dung đề.')}</div>
+
     <h3>Input</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.input_desc || 'Chưa có mô tả.')}</div>
+
     <h3>Output</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.output_desc || 'Chưa có mô tả.')}</div>
-    <p><button id="chooseProblem">Nộp bài này</button>
-    ${isAdmin && p.is_custom ? ' <button id="editProblem" class="secondary">Sửa bài</button>' : ''}</p>
-    <div id="editArea"></div>
-  `;
 
+    <h3>Ví dụ</h3>
+    <p><b>Input mẫu</b></p>
+    <pre style="white-space:pre-wrap;background:#0b1222;padding:12px;border-radius:8px;overflow:auto">${esc(p.sample_input || 'Chưa có input mẫu.')}</pre>
+
+    <p><b>Output mẫu</b></p>
+    <pre style="white-space:pre-wrap;background:#0b1222;padding:12px;border-radius:8px;overflow:auto">${esc(p.sample_output || 'Chưa có output mẫu.')}</pre>
+
+    <p>
+        <button id="chooseProblem">Nộp bài này</button>
+        ${isAdmin && p.is_custom ? ' <button id="editProblem" class="secondary">Sửa bài</button>' : ''}
+    </p>
+    <div id="editArea"></div>
+`;
   $('chooseProblem').onclick = () => {
     $('problemId').value = String(p.id);
     $('submitForm').scrollIntoView({behavior:'smooth'});
