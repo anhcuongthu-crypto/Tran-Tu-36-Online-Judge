@@ -408,12 +408,15 @@ def create_app(test_config=None):
                        VALUES (?, ?, 0, 1)''',
                     (username, generate_password_hash(password))
                 )
-        except Exception:
+        except sqlite3.IntegrityError:
             return jsonify(error='Tên đăng nhập đã tồn tại.'), 409
+        except Exception:
+            app.logger.exception('Lỗi đăng ký tài khoản')
+            return jsonify(error='Có lỗi khi đăng ký tài khoản.'), 500
         return jsonify(
             status='approved',
             message='Đăng ký thành công! Bạn có thể đăng nhập ngay.'
-        ), 202
+        ), 201
 
     @app.post('/api/login')
     def login():
