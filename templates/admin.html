@@ -398,7 +398,7 @@
             userMessage.className = 'message ' +
                 (isError ? 'error-message' : 'success-message');
         }
-
+        cancelButton.addEventListener('click', resetEditor);
         function resetEditor() {
     editingId = null;
     editor.value = '';
