@@ -965,16 +965,21 @@ sampleOutput.value = firstTest?.output ?? '';
             }
 
             pendingCustomProblems.push({
-                id: id,
-                title: title,
-                statement: statement,
-                input_desc: customProblemInput.value.trim(),
-                output_desc: customProblemOutput.value.trim(),
-                total_score: score,
-                time_limit: time,
-                memory_limit: memory,
-                subtasks: subtasks
-            });
+    id: id,
+    title: title,
+    statement: statement,
+    input_desc: customProblemInput.value.trim(),
+    output_desc: customProblemOutput.value.trim(),
+
+    // Một cặp input/output mẫu để hiển thị cho thí sinh
+    sample_input: contestSampleInput.value,
+    sample_output: contestSampleOutput.value,
+
+    total_score: score,
+    time_limit: time,
+    memory_limit: memory,
+    subtasks: subtasks
+});
 
             customProblemMessage.textContent = 'Đã thêm bài vào danh sách chờ!';
             renderCustomProblemList();
