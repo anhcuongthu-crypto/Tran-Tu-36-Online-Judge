@@ -342,7 +342,7 @@ def create_app(test_config=None):
 
         item['state'] = contest_state(item)
         return item
-
+    @app.get('/health')
     def health():
         try:
             return jsonify(ok=True, problem_count=len(problems()))
