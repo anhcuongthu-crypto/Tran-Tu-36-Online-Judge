@@ -25,7 +25,7 @@ def remove_duplicates(data):
     for problem in data:
         key = normalize_statement(problem.get('statement', ''))
 
-        # Không tự động coi các bài không có đề là trùng.
+        # Không tự động coi bài không có đề là trùng.
         if not key:
             kept.append(problem)
         elif key not in seen:
@@ -38,13 +38,39 @@ def remove_duplicates(data):
 
 
 def initialize_history(db_path):
-    """
-    Bảng problem_history được tạo bởi init_db()
-    trong oj/database.py.
-    """
-    # Giữ hàm này để app.py có thể tiếp tục gọi.
-    # Không tạo bảng bằng cú pháp riêng của SQLite.
-    return None
+    """Tạo bảng lịch sử nếu chưa tồn tại."""
+    with connect(db_path) as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS problem_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                action TEXT NOT NULL,
+                before_json TEXT NOT NULL,
+                after_json TEXT NOT NULL,
+                removed_json TEXT NOT NULL DEFAULT '[]',
+                before_count INTEGER NOT NULL DEFAULT 0,
+                after_count INTEGER NOT NULL DEFAULT 0,
+                removed_count INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+        columns = {
+            row['name']
+            for row in db.execute(
+                'PRAGMA table_info(problem_history)'
+            ).fetchall()
+        }
+
+        for column, definition in (
+            ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
+            ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
+            ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
+        ):
+            if column not in columns:
+                db.execute(
+                    f'ALTER TABLE problem_history '
+                    f'ADD COLUMN {column} {definition}'
+                )
 
 
 def save_history(
@@ -60,7 +86,7 @@ def save_history(
 
     with connect(db_path) as db:
         cur = db.execute(
-            '''
+            """
             INSERT INTO problem_history (
                 created_at,
                 action,
@@ -72,7 +98,7 @@ def save_history(
                 removed_count
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''',
+            """,
             (
                 datetime.now().isoformat(timespec='seconds'),
                 action,
@@ -95,7 +121,7 @@ def get_history(db_path, limit=100, offset=0):
 
     with connect(db_path) as db:
         rows = db.execute(
-            '''
+            """
             SELECT
                 id,
                 created_at,
@@ -106,7 +132,7 @@ def get_history(db_path, limit=100, offset=0):
             FROM problem_history
             ORDER BY id DESC
             LIMIT ? OFFSET ?
-            ''',
+            """,
             (limit, offset)
         ).fetchall()
 
@@ -124,11 +150,11 @@ def get_history_detail(db_path, history_id):
     """Lấy đầy đủ dữ liệu trước/sau của một bản ghi."""
     with connect(db_path) as db:
         row = db.execute(
-            '''
+            """
             SELECT *
             FROM problem_history
             WHERE id = ?
-            ''',
+            """,
             (history_id,)
         ).fetchone()
 
@@ -139,7 +165,7 @@ def get_history_detail(db_path, history_id):
 
     result['before'] = json.loads(result.pop('before_json'))
     result['after'] = json.loads(result.pop('after_json'))
-    result['removed'] = json.loads(result.pop('removed_json'))
+    result['removed'] = json.loads(result.pop('removed_json') or '[]')
 
     return result
 
