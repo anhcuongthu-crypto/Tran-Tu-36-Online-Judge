@@ -193,13 +193,38 @@ def create_app(test_config=None):
     init_db(app.config['DATABASE_PATH'])
     initialize_history(app.config['DATABASE_PATH'])
 
-    # Nâng cấp bảng lịch sử cũ nếu thiếu các cột thống kê.
-    with sqlite3.connect(app.config['DATABASE_PATH']) as history_db:
-        columns = {
-            row[1] for row in history_db.execute(
-                'PRAGMA table_info(problem_history)'
-            ).fetchall()
-        }
+
+    # Nâng cấp bảng lịch sử cho cả SQLite và PostgreSQL.
+    with connect(app.config['DATABASE_PATH']) as history_db:
+        if app.config['DATABASE_PATH'].startswith(
+            ('postgres://', 'postgresql://', 'postgresql+psycopg://')
+        ):
+            for column, definition in (
+                ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
+                ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
+                ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
+            ):
+                history_db.execute(
+                    f'ALTER TABLE problem_history '
+                    f'ADD COLUMN IF NOT EXISTS {column} {definition}'
+                )
+        else:
+            columns = {
+                row[1] for row in history_db.execute(
+                    'PRAGMA table_info(problem_history)'
+                ).fetchall()
+            }
+            for column, definition in (
+                ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
+                ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
+                ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
+            ):
+                if column not in columns:
+                    history_db.execute(
+                        f'ALTER TABLE problem_history '
+                        f'ADD COLUMN {column} {definition}'
+                    )
+
         for column, definition in (
             ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
             ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
