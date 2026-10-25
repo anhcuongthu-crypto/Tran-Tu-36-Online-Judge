@@ -186,9 +186,12 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
     if test_config:
         app.config.update(test_config)
 
-    Path(app.config['DATABASE_PATH']).parent.mkdir(
-        parents=True, exist_ok=True
-    )
+    if not app.config['DATABASE_PATH'].startswith(
+        ('postgres://', 'postgresql://', 'postgresql+psycopg://')
+    ):
+        Path(app.config['DATABASE_PATH']).parent.mkdir(
+            parents=True, exist_ok=True
+        )
     initialize_problem_file(app)
     init_db(app.config['DATABASE_PATH'])
     initialize_history(app.config['DATABASE_PATH'])
