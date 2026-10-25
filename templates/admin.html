@@ -400,14 +400,16 @@
         }
 
         function resetEditor() {
-            editingId = null;
-            editor.value = '';
-            title.textContent = 'Thêm bài tập';
-            saveButton.textContent = 'Thêm bài tập';
-            cancelButton.hidden = true;
-            showMessage('');
-        }
+    editingId = null;
+    editor.value = '';
+    sampleInput.value = '';
+    sampleOutput.value = '';
 
+    title.textContent = 'Thêm bài tập';
+    saveButton.textContent = 'Thêm bài tập';
+    cancelButton.hidden = true;
+    showMessage('');
+}
         function updateSelectedCount() {
             const n = selectedIds.size;
             deleteSelectedButton.textContent = `Xóa bài đã chọn (${n})`;
