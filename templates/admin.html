@@ -1041,6 +1041,96 @@
                     info.append(heading, description, times, visibility);
 
                     const actions = document.createElement('div');
+                    
+                    actions.appendChild(makeButton(
+                        'Sửa Contest',
+                        'secondary',
+                        async () => {
+                            const title = prompt(
+                                'Tên Contest:',
+                                contest.title || ''
+                            );
+                            if (title === null) return;
+
+                            const description = prompt(
+                                'Mô tả Contest:',
+                                contest.description || ''
+                            );
+                            if (description === null) return;
+
+                            const startTime = prompt(
+                                'Thời gian bắt đầu (YYYY-MM-DDTHH:MM):',
+                                String(contest.start_time || '')
+                                    .replace(' ', 'T').slice(0, 16)
+                            );
+                            if (startTime === null) return;
+
+                            const endTime = prompt(
+                                'Thời gian kết thúc (YYYY-MM-DDTHH:MM):',
+                                String(contest.end_time || '')
+                                    .replace(' ', 'T').slice(0, 16)
+                            );
+                            if (endTime === null) return;
+
+                            const visibleAnswer = prompt(
+                                'Hiển thị Contest? Nhập yes hoặc no:',
+                                contest.is_visible ? 'yes' : 'no'
+                            );
+                            if (visibleAnswer === null) return;
+
+                            const answer = visibleAnswer.trim().toLowerCase();
+
+                            if (answer !== 'yes' && answer !== 'no') {
+                                showContestMessage(
+                                    'Chỉ nhập yes hoặc no.',
+                                    true
+                                );
+                                return;
+                            }
+
+                            if (
+                                !title.trim() ||
+                                !startTime ||
+                                !endTime ||
+                                isNaN(new Date(startTime).getTime()) ||
+                                isNaN(new Date(endTime).getTime()) ||
+                                new Date(endTime) <= new Date(startTime)
+                            ) {
+                                showContestMessage(
+                                    'Tên hoặc thời gian không hợp lệ.',
+                                    true
+                                );
+                                return;
+                            }
+
+                            try {
+                                await api(
+                                    `/api/admin/contests/${contest.id}`,
+                                    {
+                                        method: 'PUT',
+                                        body: JSON.stringify({
+                                            title: title.trim(),
+                                            description: description.trim(),
+                                            start_time: startTime,
+                                            end_time: endTime,
+                                            is_visible: answer === 'yes'
+                                        })
+                                    }
+                                );
+
+                                showContestMessage(
+                                    'Đã cập nhật Contest. Danh sách bài thi được giữ nguyên.'
+                                );
+
+                                await loadContestList();
+                            } catch (error) {
+                                showContestMessage(
+                                    'Sửa Contest thất bại: ' + error.message,
+                                    true
+                                );
+                            }
+                        }
+                    ));
 
                     actions.appendChild(makeButton(
                         'Xóa Contest',
