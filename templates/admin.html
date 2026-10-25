@@ -799,7 +799,31 @@ sampleOutput.value = firstTest?.output ?? '';
                 );
                 return;
             }
+            if (sampleInput.value !== '' || sampleOutput.value !== '') {
+                if (!Array.isArray(problem.subtasks) ||
+                    problem.subtasks.length === 0) {
+                    showMessage('Bài phải có ít nhất một subtask.', true);
+                    return;
+                }
 
+                if (!Array.isArray(problem.subtasks[0].tests)) {
+                    problem.subtasks[0].tests = [];
+                }
+
+                if (problem.subtasks[0].tests.length === 0) {
+                    problem.subtasks[0].tests.push({
+                        input: sampleInput.value,
+                        output: sampleOutput.value
+                    });
+                } else {
+                    problem.subtasks[0].tests[0].input = sampleInput.value;
+                    problem.subtasks[0].tests[0].output = sampleOutput.value;
+                }
+            }
+
+            saveButton.disabled = true;
+
+            try {
             saveButton.disabled = true;
 
             try {
