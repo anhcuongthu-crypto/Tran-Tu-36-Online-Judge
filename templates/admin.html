@@ -631,6 +631,10 @@
                             editingId = String(problem.id);
                             editor.value =
                                 JSON.stringify(problem, null, 2);
+                            const firstTest = problem.subtasks?.[0]?.tests?.[0];
+
+sampleInput.value = firstTest?.input ?? '';
+sampleOutput.value = firstTest?.output ?? '';
 
                             title.textContent = `Sửa bài ${problem.id}`;
                             saveButton.textContent = 'Lưu thay đổi';
