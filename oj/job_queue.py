@@ -309,9 +309,23 @@ def _run_job(app, job_id, submission_id,
                 db.execute(
                     '''INSERT INTO solves(user_id, problem_id, best_score)
                        VALUES (?, ?, ?)
-                       ON CONFLICT(user_id, problem_id)
-                       DO UPDATE SET best_score =
-                           MAX(best_score, excluded.best_score)''',
+            if _get_contest_id(
+                app, submission_id, user_id
+            ) is None:
+                if db.__class__.__name__ == 'PostgresConnection':
+                    best_score_sql = 'GREATEST(solves.best_score, EXCLUDED.best_score)'
+                else:
+                    best_score_sql = 'MAX(solves.best_score, excluded.best_score)'
+
+                db.execute(
+                    f'''
+                    INSERT INTO solves(user_id, problem_id, best_score)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(user_id, problem_id)
+                    DO UPDATE SET best_score = {best_score_sql}
+                    ''',
+                    (user_id, problem['id'], score)
+                )
                     (user_id, problem['id'], score)
                 )
 
