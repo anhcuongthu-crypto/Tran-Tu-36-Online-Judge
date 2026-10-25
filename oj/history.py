@@ -25,7 +25,7 @@ def remove_duplicates(data):
     for problem in data:
         key = normalize_statement(problem.get('statement', ''))
 
-        # Không tự động coi bài không có đề là trùng.
+        # Không tự động coi các bài không có đề là trùng.
         if not key:
             kept.append(problem)
         elif key not in seen:
@@ -42,7 +42,7 @@ def initialize_history(db_path):
     Bảng problem_history được tạo bởi init_db()
     trong oj/database.py.
     """
-    # Đảm bảo hàm cũ trong app.py vẫn gọi được.
+    # Giữ hàm này để app.py có thể tiếp tục gọi.
     # Không tạo bảng bằng cú pháp riêng của SQLite.
     return None
 
