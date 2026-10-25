@@ -197,11 +197,25 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
     initialize_history(app.config['DATABASE_PATH'])
 
 
-    # Nâng cấp bảng lịch sử cho cả SQLite và PostgreSQL.
-    with connect(app.config['DATABASE_PATH']) as history_db:
-        if app.config['DATABASE_PATH'].startswith(
-            ('postgres://', 'postgresql://', 'postgresql+psycopg://')
+    # Nâng cấp bảng lịch sử cũ nếu thiếu các cột thống kê.
+    initialize_history(app.config['DATABASE_PATH'])
+
+    with sqlite3.connect(app.config['DATABASE_PATH']) as history_db:
+        columns = {
+            row[1] for row in history_db.execute(
+                'PRAGMA table_info(problem_history)'
+            ).fetchall()
+        }
+
+        for column, definition in (
+            ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
+            ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
+            ('removed_count', 'INTEGER NOT NULL DEFAULT 0'),
         ):
+            if column not in columns:
+                history_db.execute(
+                    f'ALTER TABLE problem_history ADD COLUMN {column} {definition}'
+                )
             for column, definition in (
                 ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
                 ('after_count', 'INTEGER NOT NULL DEFAULT 0'),
