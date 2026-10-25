@@ -1,9 +1,10 @@
 
 import json
 import re
-import sqlite3
 import unicodedata
 from datetime import datetime
+
+from oj.database import connect
 
 
 def normalize_statement(value):
@@ -24,7 +25,6 @@ def remove_duplicates(data):
     for problem in data:
         key = normalize_statement(problem.get('statement', ''))
 
-        # Không tự động coi các bài không có đề là trùng.
         if not key:
             kept.append(problem)
         elif key not in seen:
@@ -38,7 +38,7 @@ def remove_duplicates(data):
 
 def initialize_history(db_path):
     """Tạo bảng lịch sử nếu chưa tồn tại."""
-    with sqlite3.connect(db_path) as db:
+    with connect(db_path) as db:
         db.execute(
             '''
             CREATE TABLE IF NOT EXISTS problem_history (
@@ -56,29 +56,17 @@ def initialize_history(db_path):
         )
 
 
-def save_history(
-    db_path,
-    action,
-    before,
-    after,
-    removed=None
-):
+def save_history(db_path, action, before, after, removed=None):
     """Lưu trạng thái trước và sau một thao tác."""
     if removed is None:
         removed = []
 
-    with sqlite3.connect(db_path) as db:
+    with connect(db_path) as db:
         cur = db.execute(
             '''
             INSERT INTO problem_history (
-                created_at,
-                action,
-                before_json,
-                after_json,
-                removed_json,
-                before_count,
-                after_count,
-                removed_count
+                created_at, action, before_json, after_json,
+                removed_json, before_count, after_count, removed_count
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''',
@@ -93,7 +81,6 @@ def save_history(
                 len(removed)
             )
         )
-
         return cur.lastrowid
 
 
@@ -102,18 +89,11 @@ def get_history(db_path, limit=100, offset=0):
     limit = max(1, min(int(limit), 500))
     offset = max(0, int(offset))
 
-    with sqlite3.connect(db_path) as db:
-        db.row_factory = sqlite3.Row
-
+    with connect(db_path) as db:
         rows = db.execute(
             '''
-            SELECT
-                id,
-                created_at,
-                action,
-                before_count,
-                after_count,
-                removed_count
+            SELECT id, created_at, action,
+                   before_count, after_count, removed_count
             FROM problem_history
             ORDER BY id DESC
             LIMIT ? OFFSET ?
@@ -133,9 +113,7 @@ def get_history(db_path, limit=100, offset=0):
 
 def get_history_detail(db_path, history_id):
     """Lấy đầy đủ dữ liệu trước/sau của một bản ghi."""
-    with sqlite3.connect(db_path) as db:
-        db.row_factory = sqlite3.Row
-
+    with connect(db_path) as db:
         row = db.execute(
             '''
             SELECT *
@@ -149,7 +127,6 @@ def get_history_detail(db_path, history_id):
         return None
 
     result = dict(row)
-
     result['before'] = json.loads(result.pop('before_json'))
     result['after'] = json.loads(result.pop('after_json'))
     result['removed'] = json.loads(result.pop('removed_json'))
