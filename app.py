@@ -455,7 +455,10 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             ), 400
         if len(password) < 8:
             return jsonify(error='Mật khẩu tối thiểu 8 ký tự.'), 400
-        if username == app.config['ADMIN_USERNAME']:
+        if username in (
+    app.config['ADMIN_USERNAME'],
+    os.getenv('ADMIN2_USERNAME', '').strip()
+):
             return jsonify(
                 error='Tên đăng nhập này được dành riêng cho quản trị viên.'
             ), 409
