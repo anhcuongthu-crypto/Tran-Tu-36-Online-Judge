@@ -417,7 +417,7 @@ $('submitForm').addEventListener('submit', async event => {
   message.className = 'status';
 
   try {
-    const result = await api('/api/submit', {
+      const result = await api(`/api/contests/${CONTEST_ID}/submit`, {
       method: 'POST',
       body: JSON.stringify({
         problem_id: problemId,
