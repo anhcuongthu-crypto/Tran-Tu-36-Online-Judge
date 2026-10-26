@@ -1,1 +1,75 @@
-[]
+[
+  {
+    "category": "Số học",
+    "difficulty": "Trung bình",
+    "explanation": "Trong đoạn [2, 7], các số 2, 3, 4, 5, 7 có số lượng ước dương lần lượt là 2, 2, 3, 2, 2, đều là số nguyên tố. Có 5 số thỏa mãn.",
+    "id": "tuyen-sinh-lam-son-2024",
+    "input_format": "Dòng đầu chứa số nguyên t là số lượng test. t dòng tiếp theo, mỗi dòng chứa hai số nguyên dương a, b.",
+    "memory_limit": 256000,
+    "output_format": "Ghi t dòng, mỗi dòng là kết quả của một test.",
+    "sample_input": "2\n2 7\n1 100",
+    "sample_output": "5\n32",
+    "statement": "Cho hai số nguyên dương a, b. Hãy đếm trong đoạn [a, b] có bao nhiêu số có số lượng ước dương là một số nguyên tố.\n\nSubtask 1 (50% số điểm): a <= b < 200, t <= 10^6.\n\nSubtask 2 (50% số điểm): a <= b <= 10^6, t <= 10^5.",
+    "subtasks": [
+      {
+        "constraints": "a <= b < 200, t <= 10^6",
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 50,
+        "tests": [
+          {
+            "input": "2\n2 7\n1 100",
+            "output": "5\n32"
+          },
+          {
+            "input": "4\n1 1\n2 2\n3 3\n4 4\n",
+            "output": "0\n1\n1\n1\n"
+          },
+          {
+            "input": "3\n5 5\n6 6\n7 7\n",
+            "output": "1\n0\n1\n"
+          },
+          {
+            "input": "3\n1 10\n10 20\n20 30\n",
+            "output": "4\n5\n4\n"
+          },
+          {
+            "input": "2\n50 100\n100 199\n",
+            "output": "18\n"
+          }
+        ]
+      },
+      {
+        "constraints": "a <= b <= 10^6, t <= 10^5",
+        "id": "sub2",
+        "name": "Subtask 2",
+        "score": 50,
+        "tests": [
+          {
+            "input": "2\n2 7\n1 100\n",
+            "output": "5\n32\n"
+          },
+          {
+            "input": "3\n1 1000\n1000 10000\n1 1000000\n",
+            "output": "0\n"
+          },
+          {
+            "input": "3\n999990 999995\n999900 1000000\n500000 500100\n",
+            "output": "0\n"
+          },
+          {
+            "input": "3\n2 2\n4 4\n8 8\n",
+            "output": "1\n1\n0\n"
+          },
+          {
+            "input": "3\n100 200\n200 300\n300 400\n",
+            "output": "34\n"
+          }
+        ]
+      }
+    ],
+    "time_limit": 2,
+    "title": "Tuyển Sinh Lam Sơn 2024",
+    "total_score": 100
+  }
+]
