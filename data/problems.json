@@ -441,5 +441,102 @@
         ]
       }
     ]
+  },
+  {
+    "category": "Số học",
+    "difficulty": "Dễ",
+    "explanation": "Diện tích hình chữ nhật thứ nhất là a × b. Diện tích hình chữ nhật thứ hai là c × d. Kết quả là giá trị lớn nhất trong hai diện tích. Ví dụ: 2 × 4 = 8 và 3 × 6 = 18 nên kết quả là 18.",
+    "id": "hsg9-ninh-binh-2026-hinh-chu-nhat",
+    "input_format": "Gồm bốn số nguyên dương a, b, c, d (1 ≤ a, b, c, d ≤ 10^9).",
+    "memory_limit": 256000,
+    "output_format": "In ra diện tích lớn nhất tìm được.",
+    "sample_input": "2 4 3 6",
+    "sample_output": "18",
+    "statement": "Cho bốn số nguyên dương a, b, c, d. Biết rằng a, b là độ dài hai cạnh của hình chữ nhật thứ nhất; c, d là độ dài hai cạnh của hình chữ nhật thứ hai.\n\nYêu cầu: Hãy tìm diện tích của hai hình chữ nhật và đưa ra diện tích lớn nhất.",
+    "subtasks": [
+      {
+        "constraints": "1 ≤ a, b, c, d ≤ 10^3",
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 50,
+        "tests": [
+          {
+            "input": "2 4 3 6",
+            "output": "18"
+          },
+          {
+            "input": "1 1 1 1",
+            "output": "1"
+          },
+          {
+            "input": "5 6 2 3",
+            "output": "30"
+          },
+          {
+            "input": "2 3 4 5",
+            "output": "20"
+          },
+          {
+            "input": "10 10 10 10",
+            "output": "100"
+          },
+          {
+            "input": "100 200 300 400",
+            "output": "120000"
+          },
+          {
+            "input": "1000 1000 1 1",
+            "output": "1000000"
+          },
+          {
+            "input": "1 1 1000 1000",
+            "output": "1000000"
+          }
+        ]
+      },
+      {
+        "constraints": "1 ≤ a, b, c, d ≤ 10^9",
+        "id": "sub2",
+        "name": "Subtask 2",
+        "score": 50,
+        "tests": [
+          {
+            "input": "1000000000 1000000000 1 1",
+            "output": "1000000000000000000"
+          },
+          {
+            "input": "1 1 1000000000 1000000000",
+            "output": "1000000000000000000"
+          },
+          {
+            "input": "999999999 999999999 1000000000 1000000000",
+            "output": "1000000000000000000"
+          },
+          {
+            "input": "123456789 987654321 500000000 500000000",
+            "output": "250000000000000000"
+          },
+          {
+            "input": "1000000000 999999999 1 1",
+            "output": "999999999000000000"
+          },
+          {
+            "input": "1 1 999999999 999999999",
+            "output": "999999998000000001"
+          },
+          {
+            "input": "500000000 500000000 600000000 600000000",
+            "output": "360000000000000000"
+          },
+          {
+            "input": "1000000000 1 1 1000000000",
+            "output": "1000000000"
+          }
+        ]
+      }
+    ],
+    "time_limit": 1,
+    "title": "HSG9 Ninh Bình 2026 - Hình chữ nhật",
+    "total_score": 100
   }
 ]
