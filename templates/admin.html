@@ -1036,6 +1036,78 @@ sampleOutput.value = firstTest?.output ?? '';
                     'Không tải được bài tập: ' + error.message;
             }
         }
+        
+async function editContestProblem(contestId, problemId) {
+    try {
+        const data = await api(`/api/contests/${contestId}`);
+
+        const problem = (data.problems || []).find(
+            p => String(p.id) === String(problemId) && p.is_custom
+        );
+
+        if (!problem) {
+            alert('Không tìm thấy bài riêng trong Contest.');
+            return;
+        }
+
+        const newTitle = prompt('Tên bài:', problem.title);
+        if (newTitle === null) return;
+
+        const newStatement = prompt('Đề bài:', problem.statement || '');
+        if (newStatement === null) return;
+
+        const newInputDesc = prompt(
+            'Mô tả dữ liệu vào:',
+            problem.input_desc || ''
+        );
+        if (newInputDesc === null) return;
+
+        const newOutputDesc = prompt(
+            'Mô tả dữ liệu ra:',
+            problem.output_desc || ''
+        );
+        if (newOutputDesc === null) return;
+
+        const sampleInput = prompt(
+            'Input mẫu:',
+            problem.sample_input || ''
+        );
+        if (sampleInput === null) return;
+
+        const sampleOutput = prompt(
+            'Output mẫu:',
+            problem.sample_output || ''
+        );
+        if (sampleOutput === null) return;
+
+        // Lấy subtasks hiện tại từ API quản trị.
+        const adminData = await api('/api/admin/contests');
+        const contestExists = adminData.some(
+            c => Number(c.id) === Number(contestId)
+        );
+
+        if (!contestExists) {
+            alert('Không tìm thấy Contest.');
+            return;
+        }
+
+        const subtasksText = prompt(
+            'JSON subtasks và test (để nguyên nếu không muốn sửa):',
+            ''
+        );
+
+        if (subtasksText === null) return;
+
+        alert(
+            'Hàm sửa này cần lấy subtasks đầy đủ từ dữ liệu quản trị. ' +
+            'API hiện tại chưa trả subtasks trong danh sách bài Contest, ' +
+            'nên chưa thể lưu chính xác nếu không bổ sung API lấy bài riêng.'
+        );
+    } catch (error) {
+        alert('Không sửa được bài: ' + error.message);
+    }
+}
+
 
         async function loadContestList() {
             contestList.textContent = 'Đang tải Contest...';
