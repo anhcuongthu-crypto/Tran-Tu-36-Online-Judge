@@ -221,14 +221,14 @@
     ]
   },
   {
-    "title": "Kiểm tra số chẵn lẻ",
+    "title": "Kiểm tra số chẵn lẻ số lớn",
     "id": "kiem-tra-chan-le-32bit",
     "category": "C++ Cơ Bản",
-    "difficulty": "Rất Dễ",
-    "statement": "Nhập vào một số nguyên n. Hãy kiểm tra xem n là số chẵn hay số lẻ. In ra CHAN nếu là số chẵn và LE nếu là số lẻ.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
-    "input_format": "Một dòng chứa số nguyên n (-10^9 <= n <= 10^9).",
+    "difficulty": "Trung bình",
+    "statement": "Nhập vào một số nguyên n. Hãy kiểm tra xem n là số chẵn hay số lẻ. In ra CHAN nếu là số chẵn và LE nếu là số lẻ.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 64-bit (kiểu `long long` trong C++).",
+    "input_format": "Một dòng chứa số nguyên n (-10^18 <= n <= 10^18).",
     "output_format": "In ra CHAN hoặc LE.",
-    "sample_input": "4",
+    "sample_input": "1000000000000000000",
     "sample_output": "CHAN",
     "explanation": "",
     "time_limit": 1,
@@ -239,23 +239,19 @@
         "id": "sub1",
         "name": "Subtask 1",
         "score": 100,
-        "constraints": "-10^9 <= n <= 10^9",
+        "constraints": "-10^18 <= n <= 10^18",
         "tests": [
           {
             "input": "4",
             "output": "CHAN"
           },
           {
-            "input": "7\n",
+            "input": "-999999999999999999\n",
             "output": "LE\n"
           },
           {
             "input": "0\n",
             "output": "CHAN\n"
-          },
-          {
-            "input": "-5\n",
-            "output": "LE\n"
           }
         ]
       }
