@@ -330,5 +330,42 @@
     "time_limit": 1,
     "title": "Tổng và Tích hai số",
     "total_score": 100
+  },
+  {
+    "title": "Vé xem phim",
+    "id": "ve-phim-64",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Rất Dễ",
+    "statement": "Một rạp chiếu phim có chương trình khuyến mãi: Nếu tuổi của khách hàng dưới 12 tuổi thì giá vé là 50000 VNĐ, ngược lại giá vé là 80000 VNĐ. Cho biết tuổi của khách hàng, hãy tính số tiền vé phải trả.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 64-bit (kiểu `long long` trong C++).",
+    "input_format": "Một dòng chứa số nguyên t là tuổi của khách hàng.",
+    "output_format": "In ra số tiền vé phải trả.",
+    "sample_input": "10",
+    "sample_output": "50000",
+    "explanation": "",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "1 <= t <= 100",
+        "tests": [
+          {
+            "input": "10\n",
+            "output": "50000\n"
+          },
+          {
+            "input": "12\n",
+            "output": "80000\n"
+          },
+          {
+            "input": "25\n",
+            "output": "80000\n"
+          }
+        ]
+      }
+    ]
   }
 ]
