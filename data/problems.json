@@ -256,5 +256,42 @@
         ]
       }
     ]
+  },
+  {
+    "title": "Tổng số thí sinh thi Tmath",
+    "id": "tong-thi-sinh-18-10-32bit",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Rất Dễ",
+    "statement": "Trung tâm Toán - Tin Tmath tổ chức kì thi vào 18/10[cite: 2]. Cho số lượng học sinh các cấp A, B và C[cite: 2]. Hãy tính tổng số lượng thí sinh tham gia.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "input_format": "Dòng 1 ghi số nguyên A[cite: 2].\nDòng 2 ghi số nguyên B[cite: 2].\nDòng 3 ghi số nguyên C[cite: 2].",
+    "output_format": "In ra tổng số lượng thí sinh.",
+    "sample_input": "10\n20\n30",
+    "sample_output": "60",
+    "explanation": "",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "1 <= A, B, C <= 100[cite: 2]",
+        "tests": [
+          {
+            "input": "3\n5\n10",
+            "output": "18"
+          },
+          {
+            "input": "5\n5\n5\n",
+            "output": "15\n"
+          },
+          {
+            "input": "100\n100\n100\n",
+            "output": "300\n"
+          }
+        ]
+      }
+    ]
   }
 ]
