@@ -1073,30 +1073,17 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     ]
                 )
 
-                for i, p in enumerate(custom_problems, start=len(ids)):
+                  for i, p in enumerate(custom_problems, start=len(ids)):
                     pid = str(p['id']).strip()
 
                     db.execute(
                         '''INSERT INTO contest_custom_problems
-                        (contest_id, problem_id, title, statement,
-    input_desc, output_desc, subtasks_json,
-    total_score, time_limit, memory_limit,
-    sample_input, sample_output)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-(
-    contest_id,
-    pid,
-    str(p['title']).strip(),
-    str(p['statement']).strip(),
-    str(p.get('input_desc', '')),
-    str(p.get('output_desc', '')),
-    json.dumps(p['subtasks'], ensure_ascii=False),
-    float(p['total_score']),
-    float(p.get('time_limit', 1)),
-    int(p.get('memory_limit', 256000)),
-    str(p.get('sample_input', '')),
-    str(p.get('sample_output', ''))
-)
+                           (contest_id, problem_id, title, statement,
+                            input_desc, output_desc, subtasks_json,
+                            total_score, time_limit, memory_limit,
+                            sample_input, sample_output)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (
                             contest_id,
                             pid,
                             str(p['title']).strip(),
@@ -1108,7 +1095,9 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                             ),
                             float(p['total_score']),
                             float(p.get('time_limit', 1)),
-                            int(p.get('memory_limit', 256000))
+                            int(p.get('memory_limit', 256000)),
+                            str(p.get('sample_input', '')),
+                            str(p.get('sample_output', ''))
                         )
                     )
 
@@ -1118,7 +1107,6 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                            VALUES (?, ?, ?)''',
                         (contest_id, pid, i)
                     )
-
         except sqlite3.IntegrityError as exc:
             return jsonify(
                 error='Không lưu được Contest do dữ liệu trùng hoặc không hợp lệ: '
