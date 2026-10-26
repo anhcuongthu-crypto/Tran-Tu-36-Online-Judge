@@ -293,5 +293,42 @@
         ]
       }
     ]
+  },
+  {
+    "title": "So sánh hai số lớn",
+    "id": "so-sanh-hai-so-64bit",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Trung bình",
+    "statement": "Cho hai số nguyên a và b. Hãy tìm và in ra số lớn hơn. Nếu hai số bằng nhau, in ra số đó.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 64-bit (kiểu `long long` trong C++).",
+    "input_format": "Một dòng chứa hai số nguyên a và b (-10^18 <= a, b <= 10^18).",
+    "output_format": "In ra số lớn nhất.",
+    "sample_input": "1000000000000000000 500000000000000000",
+    "sample_output": "1000000000000000000",
+    "explanation": "",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "-10^18 <= a, b <= 10^18",
+        "tests": [
+          {
+            "input": "3 6",
+            "output": "6"
+          },
+          {
+            "input": "-999999999999999999 0\n",
+            "output": "0\n"
+          },
+          {
+            "input": "123456789123456789 123456789123456789\n",
+            "output": "123456789123456789\n"
+          }
+        ]
+      }
+    ]
   }
 ]
