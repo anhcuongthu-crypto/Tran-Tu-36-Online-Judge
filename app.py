@@ -1073,7 +1073,7 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     ]
                 )
 
-                  for i, p in enumerate(custom_problems, start=len(ids)):
+                for i, p in enumerate(custom_problems, start=len(ids)):
                     pid = str(p['id']).strip()
 
                     db.execute(
@@ -1090,9 +1090,7 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                             str(p['statement']).strip(),
                             str(p.get('input_desc', '')),
                             str(p.get('output_desc', '')),
-                            json.dumps(
-                                p['subtasks'], ensure_ascii=False
-                            ),
+                            json.dumps(p['subtasks'], ensure_ascii=False),
                             float(p['total_score']),
                             float(p.get('time_limit', 1)),
                             int(p.get('memory_limit', 256000)),
