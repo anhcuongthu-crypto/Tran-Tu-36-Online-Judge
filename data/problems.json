@@ -404,5 +404,42 @@
         ]
       }
     ]
+  },
+  {
+    "title": "Tính tổng 1 đến n",
+    "id": "for cơ bản",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Rất Dễ",
+    "statement": "Nhập vào một số nguyên dương n. Hãy tính và in ra tổng S = 1 + 2 + ... + n.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 64-bit (kiểu `long long` trong C++).",
+    "input_format": "Một dòng chứa số nguyên dương n.",
+    "output_format": "In ra tổng các số từ 1 đến n.",
+    "sample_input": "5",
+    "sample_output": "15",
+    "explanation": "",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "1 <= n <= 10^6",
+        "tests": [
+          {
+            "input": "5\n",
+            "output": "15\n"
+          },
+          {
+            "input": "1\n",
+            "output": "1\n"
+          },
+          {
+            "input": "100\n",
+            "output": "5050\n"
+          }
+        ]
+      }
+    ]
   }
 ]
