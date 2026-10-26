@@ -798,31 +798,62 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
     # SỬA NỘI DUNG BÀI RIÊNG TRONG CONTEST
     @app.put('/api/admin/contests/<int:contest_id>/problems/<pid>')
     def admin_update_contest_problem(contest_id, pid):
-        admin = admin_required()
-        if not admin:
+        if not admin_required():
             return jsonify(error='Chỉ admin.'), 403
 
         d = request.get_json(silent=True) or {}
 
-        title = str(d.get('title', '')).strip()
-        statement = str(d.get('statement', '')).strip()
-        input_desc = str(d.get('input_desc', '')).strip()
-        output_desc = str(d.get('output_desc', '')).strip()
-        subtasks = d.get('subtasks')
+        with connect(app.config['DATABASE_PATH']) as db:
+            old = db.execute(
+                '''SELECT * FROM contest_custom_problems
+                   WHERE contest_id=? AND problem_id=?''',
+                (contest_id, pid)
+            ).fetchone()
+
+        if not old:
+            return jsonify(
+                error='Không tìm thấy bài riêng trong contest.'
+            ), 404
+
+        title = str(d.get('title', old['title'] or '')).strip()
+        statement = str(
+            d.get('statement', old['statement'] or '')
+        ).strip()
+        input_desc = str(
+            d.get('input_desc', old['input_desc'] or '')
+        ).strip()
+        output_desc = str(
+            d.get('output_desc', old['output_desc'] or '')
+        ).strip()
 
         if not title or not statement:
-            return jsonify(error='Tên bài và đề bài không được để trống.'), 400
-
-        if not isinstance(subtasks, list) or not subtasks:
-            return jsonify(error='Phải có ít nhất một subtask.'), 400
+            return jsonify(
+                error='Tên bài và đề bài không được để trống.'
+            ), 400
 
         try:
-            total_score = float(d.get('total_score', 0))
-            time_limit = float(d.get('time_limit', 1))
-            memory_limit = int(d.get('memory_limit', 256000))
+            subtasks = d.get('subtasks')
+            if subtasks is None:
+                subtasks = json.loads(old['subtasks_json'] or '[]')
 
-            if total_score <= 0 or time_limit <= 0 or memory_limit <= 0:
+            total_score = float(
+                d.get('total_score', old['total_score'])
+            )
+            time_limit = float(
+                d.get('time_limit', old['time_limit'])
+            )
+            memory_limit = int(
+                d.get('memory_limit', old['memory_limit'])
+            )
+
+            if (total_score <= 0 or time_limit <= 0
+                    or memory_limit <= 0):
                 raise ValueError()
+
+            if not isinstance(subtasks, list) or not subtasks:
+                return jsonify(
+                    error='Bài phải có ít nhất một subtask.'
+                ), 400
 
             score_sum = 0
             subtask_ids = set()
@@ -838,7 +869,8 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
 
                 if (not sid or not name or score <= 0
                         or sid in subtask_ids
-                        or not isinstance(tests, list) or not tests):
+                        or not isinstance(tests, list)
+                        or not tests):
                     raise ValueError()
 
                 subtask_ids.add(sid)
@@ -852,25 +884,15 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
 
             if abs(score_sum - total_score) > 1e-9:
                 return jsonify(
-                    error='Tổng điểm các subtask phải bằng total_score.'
+                    error='Tổng điểm subtask phải bằng điểm tối đa.'
                 ), 400
 
         except (ValueError, TypeError, OverflowError):
-            return jsonify(error='Dữ liệu subtask hoặc giới hạn không hợp lệ.'), 400
+            return jsonify(
+                error='Dữ liệu subtask hoặc giới hạn không hợp lệ.'
+            ), 400
 
         with connect(app.config['DATABASE_PATH']) as db:
-            row = db.execute(
-                '''SELECT problem_id FROM contest_custom_problems
-                   WHERE contest_id=? AND problem_id=?''',
-                (contest_id, pid)
-            ).fetchone()
-
-            if not row:
-                return jsonify(
-                    error='Không tìm thấy bài riêng trong contest.'
-                ), 404
-
-
             db.execute(
                 '''UPDATE contest_custom_problems
                    SET title=?, statement=?, input_desc=?, output_desc=?,
@@ -886,8 +908,12 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     total_score,
                     time_limit,
                     memory_limit,
-                    str(d.get('sample_input', '')),
-                    str(d.get('sample_output', '')),
+                    str(d.get(
+                        'sample_input', old['sample_input'] or ''
+                    )),
+                    str(d.get(
+                        'sample_output', old['sample_output'] or ''
+                    )),
                     contest_id,
                     pid
                 )
