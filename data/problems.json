@@ -145,5 +145,42 @@
         ]
       }
     ]
+  },
+  {
+    "title": "Chia bánh - Phép chia lấy nguyên và dư",
+    "id": "chia-banh-32bit",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Rất Dễ",
+    "statement": "Có n cái bánh chia đều cho k bạn. Hãy tính xem mỗi bạn nhận được bao nhiêu cái bánh và còn thừa lại bao nhiêu cái.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "input_format": "Một dòng chứa hai số nguyên dương n và k cách nhau bởi khoảng trắng.",
+    "output_format": "Dòng 1 ghi số bánh mỗi bạn nhận được.\nDòng 2 ghi số bánh còn thừa.",
+    "sample_input": "14 3",
+    "sample_output": "4\n2",
+    "explanation": "- Số bánh mỗi bạn nhận được: 14 / 3 = 4\n- Số bánh còn thừa: 14 % 3 = 2",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "1 <= n <= 1000, 1 <= k <= 100",
+        "tests": [
+          {
+            "input": "14 3",
+            "output": "4\n2"
+          },
+          {
+            "input": "20 5\n",
+            "output": "4\n0\n"
+          },
+          {
+            "input": "7 10\n",
+            "output": "0\n7\n"
+          }
+        ]
+      }
+    ]
   }
 ]
