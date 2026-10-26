@@ -367,5 +367,42 @@
         ]
       }
     ]
+  },
+  {
+    "title": "Gửi xe",
+    "id": "xe-32",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Rất Dễ",
+    "statement": "Nhập vào số giờ gửi xe. Nếu số giờ gửi từ 2 giờ trở xuống thì phí là 5000 đồng, ngược lại phí là 10000 đồng. In ra số tiền phải trả.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "input_format": "Một dòng chứa số nguyên n là số giờ gửi xe.",
+    "output_format": "In ra số tiền phí gửi xe.",
+    "sample_input": "2",
+    "sample_output": "5000",
+    "explanation": "",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "1 <= n <= 24",
+        "tests": [
+          {
+            "input": "2\n",
+            "output": "5000\n"
+          },
+          {
+            "input": "5\n",
+            "output": "10000\n"
+          },
+          {
+            "input": "1\n",
+            "output": "5000\n"
+          }
+        ]
+      }
+    ]
   }
 ]
