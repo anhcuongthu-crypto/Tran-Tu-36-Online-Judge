@@ -50,20 +50,40 @@ def load_problems(path):
     return data
 
 
+
 def save_problems(data, path):
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
 
+    if not isinstance(data, list):
+        raise ValueError('Ngân hàng đề phải là danh sách.')
+
+    ids = [str(p.get('id', '')) for p in data]
+
+    if any(not pid for pid in ids):
+        raise ValueError('Có bài tập thiếu ID.')
+
+    if len(ids) != len(set(ids)):
+        raise ValueError('Có ID bài tập bị trùng.')
+
+    content = json.dumps(data, ensure_ascii=False, indent=2)
+
+    # Lưu lên GitHub nếu đã cấu hình token
     if os.getenv('GITHUB_TOKEN'):
+        if not os.getenv('GITHUB_OWNER') or not os.getenv('GITHUB_REPO'):
+            raise RuntimeError(
+                'Thiếu GITHUB_OWNER hoặc GITHUB_REPO.'
+            )
+
         branch = os.getenv('GITHUB_BRANCH', 'main')
+
+        # Đọc phiên bản mới nhất trên GitHub
         _, sha = github_read_problems()
 
         payload = {
             'message': 'Update problem bank from Online Judge',
             'content': base64.b64encode(
-                json.dumps(
-                    data, ensure_ascii=False, indent=2
-                ).encode('utf-8')
+                content.encode('utf-8')
             ).decode('ascii'),
             'sha': sha,
             'branch': branch
@@ -75,12 +95,25 @@ def save_problems(data, path):
             payload=payload
         )
 
+        # Kiểm tra dữ liệu đã lưu
+        saved_data, _ = github_read_problems()
+
+        if saved_data != data:
+            raise RuntimeError(
+                'Dữ liệu trên GitHub chưa khớp. '
+                'Hãy tải lại trang và kiểm tra.'
+            )
+
+    # Ghi file cục bộ
     tmp = target.with_suffix(target.suffix + '.tmp')
-    tmp.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
-    tmp.replace(target)
+
+    try:
+        tmp.write_text(content, encoding='utf-8')
+        tmp.replace(target)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
 
 def github_request(path, method='GET', payload=None):
     token = os.getenv('GITHUB_TOKEN')
