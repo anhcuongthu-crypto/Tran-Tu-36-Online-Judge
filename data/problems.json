@@ -73,53 +73,37 @@
     "total_score": 100
   },
   {
-    "title": "Nhập xuất cơ bản - Lần đầu làm quen C++",
+    "title": "Tổng và Tích hai số",
     "id": "cin-cout-co-ban",
     "category": "C++ Cơ Bản",
     "difficulty": "Rất Dễ",
-    "statement": "Cho hai số nguyên a và b. Bạn hãy viết chương trình thực hiện các yêu cầu sau:\n1. Nhập vào hai số nguyên a và b từ bàn phím.\n2. In ra tổng của hai số đó trên dòng thứ nhất.\n3. In ra tích của hai số đó trên dòng thứ hai.\n\n* LƯU Ý VỀ KIỂU DỮ LIỆU:\n- Subtask 1 (50% số điểm): 1 <= a, b <= 100. (Các phép tính nằm hoàn toàn trong phạm vi số nguyên 32-bit `int`).\n- Subtask 2 (50% số điểm): 1 <= a, b <= 10^9. (Tích a * b có thể lên tới 10^18, vượt quá giới hạn 32-bit nên bắt buộc phải dùng kiểu số nguyên 64-bit `long long` trong C++).",
-    "input_format": "Một dòng duy nhất chứa hai số nguyên a và b cách nhau bởi một khoảng trắng.",
-    "output_format": "In ra hai dòng:\n- Dòng 1: Ghi tổng của a và b.\n- Dòng 2: Ghi tích của a và b.",
+    "statement": "Cho hai số nguyên a và b. Hãy nhập hai số từ bàn phím, sau đó in ra tổng a + b ở dòng đầu tiên và tích a * b ở dòng thứ hai.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "input_format": "Một dòng chứa hai số nguyên a và b (-1000 <= a, b <= 1000).",
+    "output_format": "Dòng 1 ghi tổng a + b.\nDòng 2 ghi tích a * b.",
     "sample_input": "3 5",
     "sample_output": "8\n15",
-    "explanation": "Với a = 3 và b = 5:\n- Tổng a + b = 3 + 5 = 8.\n- Tích a * b = 3 * 5 = 15.\n\nLưu ý kỹ thuật:\n- Phạm vi Subtask 1: Dùng kiểu 32-bit (`int`).\n- Phạm vi Subtask 2: Tích 10^9 * 10^9 = 10^18 sẽ gây tràn số (Overflow) nếu dùng kiểu 32-bit `int` (giới hạn ~2*10^9). Do đó bắt buộc khai báo biến kiểu 64-bit (`long long`).",
+    "explanation": "Tổng: 3 + 5 = 8\nTích: 3 * 5 = 15",
     "time_limit": 1,
     "memory_limit": 256000,
     "total_score": 100,
     "subtasks": [
       {
         "id": "sub1",
-        "name": "Subtask 1 (Kiểu 32-bit)",
-        "score": 50,
-        "constraints": "1 <= a, b <= 100",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "-1000 <= a, b <= 1000",
         "tests": [
           {
             "input": "3 5",
             "output": "8\n15"
           },
           {
-            "input": "1 1\n",
-            "output": "2\n1\n"
+            "input": "100 200\n",
+            "output": "300\n20000\n"
           },
           {
-            "input": "100 100\n",
-            "output": "200\n10000\n"
-          }
-        ]
-      },
-      {
-        "id": "sub2",
-        "name": "Subtask 2 (Kiểu 64-bit)",
-        "score": 50,
-        "constraints": "1 <= a, b <= 10^9",
-        "tests": [
-          {
-            "input": "100000 200000\n",
-            "output": "300000\n20000000000\n"
-          },
-          {
-            "input": "1000000000 1000000000\n",
-            "output": "2000000000\n1000000000000000000\n"
+            "input": "-5 10\n",
+            "output": "5\n-50\n"
           }
         ]
       }
