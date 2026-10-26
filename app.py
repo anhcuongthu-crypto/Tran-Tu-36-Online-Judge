@@ -261,6 +261,32 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             return data
         return load_problems(app.config['PROBLEMS_PATH'])
 
+    admin2_username = os.getenv('ADMIN2_USERNAME', '').strip()
+    admin2_password = os.getenv('ADMIN2_PASSWORD', '')
+
+    if admin2_username and admin2_password:
+        with connect(app.config['DATABASE_PATH']) as db:
+            row = db.execute(
+                'SELECT id FROM users WHERE username=?',
+                (admin2_username,)
+            ).fetchone()
+
+            if row:
+                db.execute(
+                    'UPDATE users SET is_admin=1, approved=1 WHERE id=?',
+                    (row['id'],)
+                )
+            else:
+                db.execute(
+                    '''INSERT INTO users
+                       (username, password_hash, is_admin, approved)
+                       VALUES (?, ?, 1, 1)''',
+                    (
+                        admin2_username,
+                        generate_password_hash(admin2_password)
+                    )
+                )
+
     def current_user():
         uid = session.get('user_id')
         if not uid:
