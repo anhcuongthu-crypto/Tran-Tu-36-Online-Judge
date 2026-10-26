@@ -332,7 +332,7 @@ async function editProblem(p) {
         Endpoint sửa bài phải khớp với backend Flask của m.
         Nếu backend dùng URL hoặc cấu trúc khác, cần sửa đoạn fetch này.
       */
-      const result = await api(`/api/problems/${encodeURIComponent(p.id)}`, {
+      const result = await api(`/api/admin/contests/${CONTEST_ID}/problems/${encodeURIComponent(p.id)}`, {
         method: 'PUT',
         body: JSON.stringify({
           title,
