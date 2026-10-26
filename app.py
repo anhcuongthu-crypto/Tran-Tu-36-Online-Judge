@@ -1078,11 +1078,25 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
 
                     db.execute(
                         '''INSERT INTO contest_custom_problems
-                           (contest_id, problem_id, title, statement,
-                            input_desc, output_desc, subtasks_json,
-                            total_score, time_limit, memory_limit)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (
+                        (contest_id, problem_id, title, statement,
+    input_desc, output_desc, subtasks_json,
+    total_score, time_limit, memory_limit,
+    sample_input, sample_output)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+(
+    contest_id,
+    pid,
+    str(p['title']).strip(),
+    str(p['statement']).strip(),
+    str(p.get('input_desc', '')),
+    str(p.get('output_desc', '')),
+    json.dumps(p['subtasks'], ensure_ascii=False),
+    float(p['total_score']),
+    float(p.get('time_limit', 1)),
+    int(p.get('memory_limit', 256000)),
+    str(p.get('sample_input', '')),
+    str(p.get('sample_output', ''))
+)
                             contest_id,
                             pid,
                             str(p['title']).strip(),
