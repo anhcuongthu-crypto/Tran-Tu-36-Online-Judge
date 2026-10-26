@@ -182,5 +182,42 @@
         ]
       }
     ]
+  },
+  {
+    "title": "Mua vở học tập",
+    "id": "mua-vo-32bit",
+    "category": "C++ Cơ Bản",
+    "difficulty": "Rất Dễ",
+    "statement": "Nhập vào số lượng quyển vở và đơn giá của một quyển. In ra tổng số tiền phải trả.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "input_format": "Một dòng chứa hai số nguyên dương n và gia cách nhau bởi khoảng trắng.",
+    "output_format": "In ra tổng số tiền.",
+    "sample_input": "5 7000",
+    "sample_output": "35000",
+    "explanation": "",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 100,
+        "constraints": "1 <= n, gia <= 1000",
+        "tests": [
+          {
+            "input": "5 7000",
+            "output": "35000"
+          },
+          {
+            "input": "10 5000\n",
+            "output": "50000\n"
+          },
+          {
+            "input": "2 12000\n",
+            "output": "24000\n"
+          }
+        ]
+      }
+    ]
   }
 ]
