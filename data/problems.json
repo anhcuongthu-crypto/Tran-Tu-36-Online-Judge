@@ -925,5 +925,174 @@
         ]
       }
     ]
+  },
+  {
+    "id": "Ninh Binh-Câu 4",
+    "title": "HSG9 Ninh Bình 2026 - Chia dãy",
+    "category": "Dãy số",
+    "difficulty": "Khó",
+    "time_limit": 1,
+    "memory_limit": 256000,
+    "total_score": 100,
+    "statement": "Cho dãy A gồm n số nguyên không âm. Hãy chia toàn bộ dãy thành các đoạn liên tiếp không rỗng sao cho tổng mỗi đoạn là một lũy thừa của 2 (1, 2, 4, 8, ...).\n\nYêu cầu: Tìm số đoạn ít nhất có thể chia. Nếu không tồn tại cách chia hợp lệ, in ra -1.",
+    "input_format": "Dòng 1 chứa số nguyên dương n (1 <= n <= 2000).\nDòng 2 chứa n số nguyên ai (0 <= ai <= 20000).",
+    "output_format": "In ra số đoạn ít nhất hoặc -1 nếu không thể chia.",
+    "sample_input": "6\n5 3 1 1 1 3",
+    "sample_output": "3",
+    "explanation": "Chia thành {5,3}, {1,1}, {1,3}, có tổng lần lượt là 8, 2, 4. Không thể chia thành ít hơn 3 đoạn.",
+    "subtasks": [
+      {
+        "id": "sub1",
+        "name": "Subtask 1",
+        "score": 20,
+        "constraints": "1 <= n <= 100; 0 <= ai <= 20000",
+        "tests": [
+          {
+            "input": "6\n5 3 1 1 1 3",
+            "output": "3"
+          },
+          {
+            "input": "1\n1",
+            "output": "1"
+          },
+          {
+            "input": "1\n0",
+            "output": "-1"
+          },
+          {
+            "input": "1\n2",
+            "output": "1"
+          },
+          {
+            "input": "1\n3",
+            "output": "-1"
+          },
+          {
+            "input": "4\n1 1 1 1",
+            "output": "1"
+          },
+          {
+            "input": "3\n0 0 0",
+            "output": "-1"
+          },
+          {
+            "input": "4\n0 1 0 1",
+            "output": "1"
+          },
+          {
+            "input": "2\n3 1",
+            "output": "1"
+          },
+          {
+            "input": "2\n3 2",
+            "output": "-1"
+          },
+          {
+            "input": "2\n5 3",
+            "output": "1"
+          },
+          {
+            "input": "3\n2 2 2",
+            "output": "2"
+          },
+          {
+            "input": "4\n7 1 1 1",
+            "output": "2"
+          }
+        ]
+      },
+      {
+        "id": "sub2",
+        "name": "Subtask 2",
+        "score": 25,
+        "constraints": "1 <= n <= 500; 0 <= ai <= 20000",
+        "tests": [
+          {
+            "input": "4\n0 2 0 2",
+            "output": "1"
+          },
+          {
+            "input": "3\n4 0 4",
+            "output": "1"
+          },
+          {
+            "input": "4\n1 2 4 8",
+            "output": "4"
+          },
+          {
+            "input": "4\n6 2 3 1",
+            "output": "2"
+          },
+          {
+            "input": "7\n5 3 1 1 1 3 0",
+            "output": "3"
+          },
+          {
+            "input": "8\n20000 20000 20000 20000 20000 20000 20000 20000",
+            "output": "-1"
+          },
+          {
+            "input": "10\n0 0 0 0 0 0 0 0 0 1",
+            "output": "1"
+          },
+          {
+            "input": "6\n3 3 3 3 3 3",
+            "output": "-1"
+          },
+          {
+            "input": "10\n1 1 1 1 1 1 1 1 1 1",
+            "output": "2"
+          },
+          {
+            "input": "4\n20000 20000 20000 5536",
+            "output": "1"
+          }
+        ]
+      },
+      {
+        "id": "sub3",
+        "name": "Subtask 3",
+        "score": 25,
+        "constraints": "1 <= n <= 1000; 0 <= ai <= 20000",
+        "tests": [
+          {
+            "input": "3\n16384 16384 16384",
+            "output": "2"
+          },
+          {
+            "input": "10\n0 0 0 0 0 0 0 0 0 0",
+            "output": "-1"
+          },
+          {
+            "input": "16\n1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1",
+            "output": "1"
+          },
+          {
+            "input": "16\n2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2",
+            "output": "1"
+          }
+        ]
+      },
+      {
+        "id": "sub4",
+        "name": "Subtask 4",
+        "score": 30,
+        "constraints": "1 <= n <= 2000; 0 <= ai <= 20000",
+        "tests": [
+          {
+            "input": "32\n1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1",
+            "output": "1"
+          },
+          {
+            "input": "32\n0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1",
+            "output": "1"
+          },
+          {
+            "input": "16\n20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000",
+            "output": "-1"
+          }
+        ]
+      }
+    ]
   }
 ]
