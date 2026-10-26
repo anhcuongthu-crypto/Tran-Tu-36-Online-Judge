@@ -73,25 +73,22 @@
     "total_score": 100
   },
   {
-    "title": "Tổng và Tích hai số",
-    "id": "cin-cout-co-ban",
     "category": "C++ Cơ Bản",
     "difficulty": "Rất Dễ",
-    "statement": "Cho hai số nguyên a và b. Hãy nhập hai số từ bàn phím, sau đó in ra tổng a + b ở dòng đầu tiên và tích a * b ở dòng thứ hai.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "explanation": "Tổng: 3 + 5 = 8\nTích: 3 * 5 = 15",
+    "id": "cin-cout-co-ban",
     "input_format": "Một dòng chứa hai số nguyên a và b (-1000 <= a, b <= 1000).",
+    "memory_limit": 256000,
     "output_format": "Dòng 1 ghi tổng a + b.\nDòng 2 ghi tích a * b.",
     "sample_input": "3 5",
     "sample_output": "8\n15",
-    "explanation": "Tổng: 3 + 5 = 8\nTích: 3 * 5 = 15",
-    "time_limit": 1,
-    "memory_limit": 256000,
-    "total_score": 100,
+    "statement": "Cho hai số nguyên a và b. Hãy nhập hai số từ bàn phím, sau đó in ra tổng a + b ở dòng đầu tiên và tích a * b ở dòng thứ hai.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
     "subtasks": [
       {
+        "constraints": "-1000 <= a, b <= 1000",
         "id": "sub1",
         "name": "Subtask 1",
         "score": 100,
-        "constraints": "-1000 <= a, b <= 1000",
         "tests": [
           {
             "input": "3 5",
@@ -107,7 +104,10 @@
           }
         ]
       }
-    ]
+    ],
+    "time_limit": 1,
+    "title": "Tổng và Tích hai số",
+    "total_score": 100
   },
   {
     "title": "Chu vi và Diện tích Hình chữ nhật",
