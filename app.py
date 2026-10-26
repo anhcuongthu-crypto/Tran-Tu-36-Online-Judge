@@ -841,17 +841,26 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     error='Không tìm thấy bài riêng trong contest.'
                 ), 404
 
+
             db.execute(
                 '''UPDATE contest_custom_problems
                    SET title=?, statement=?, input_desc=?, output_desc=?,
                        subtasks_json=?, total_score=?, time_limit=?,
-                       memory_limit=?
+                       memory_limit=?, sample_input=?, sample_output=?
                    WHERE contest_id=? AND problem_id=?''',
                 (
-                    title, statement, input_desc, output_desc,
+                    title,
+                    statement,
+                    input_desc,
+                    output_desc,
                     json.dumps(subtasks, ensure_ascii=False),
-                    total_score, time_limit, memory_limit,
-                    contest_id, pid
+                    total_score,
+                    time_limit,
+                    memory_limit,
+                    str(d.get('sample_input', '')),
+                    str(d.get('sample_output', '')),
+                    contest_id,
+                    pid
                 )
             )
 
