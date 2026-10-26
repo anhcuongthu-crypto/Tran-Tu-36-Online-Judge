@@ -1037,6 +1037,7 @@ sampleOutput.value = firstTest?.output ?? '';
             }
         }
         
+
 async function editContestProblem(contestId, problemId) {
     try {
         const data = await api(`/api/contests/${contestId}`);
@@ -1050,63 +1051,85 @@ async function editContestProblem(contestId, problemId) {
             return;
         }
 
-        const newTitle = prompt('Tên bài:', problem.title);
+        const newTitle = prompt('Tên bài:', problem.title || '');
         if (newTitle === null) return;
 
         const newStatement = prompt('Đề bài:', problem.statement || '');
         if (newStatement === null) return;
 
         const newInputDesc = prompt(
-            'Mô tả dữ liệu vào:',
-            problem.input_desc || ''
+            'Mô tả dữ liệu vào:', problem.input_desc || ''
         );
         if (newInputDesc === null) return;
 
         const newOutputDesc = prompt(
-            'Mô tả dữ liệu ra:',
-            problem.output_desc || ''
+            'Mô tả dữ liệu ra:', problem.output_desc || ''
         );
         if (newOutputDesc === null) return;
 
         const sampleInput = prompt(
-            'Input mẫu:',
-            problem.sample_input || ''
+            'Input mẫu:', problem.sample_input || ''
         );
         if (sampleInput === null) return;
 
         const sampleOutput = prompt(
-            'Output mẫu:',
-            problem.sample_output || ''
+            'Output mẫu:', problem.sample_output || ''
         );
         if (sampleOutput === null) return;
 
-        // Lấy subtasks hiện tại từ API quản trị.
-        const adminData = await api('/api/admin/contests');
-        const contestExists = adminData.some(
-            c => Number(c.id) === Number(contestId)
+        const subtasksText = prompt(
+            'Nhập JSON subtasks đầy đủ:',
+            JSON.stringify(problem.subtasks || [], null, 2)
         );
+        if (subtasksText === null) return;
 
-        if (!contestExists) {
-            alert('Không tìm thấy Contest.');
+        let subtasks;
+        try {
+            subtasks = JSON.parse(subtasksText);
+        } catch (e) {
+            alert('JSON subtasks không hợp lệ!');
             return;
         }
 
-        const subtasksText = prompt(
-            'JSON subtasks và test (để nguyên nếu không muốn sửa):',
-            ''
+        if (!Array.isArray(subtasks) || subtasks.length === 0) {
+            alert('Bài phải có ít nhất một subtask!');
+            return;
+        }
+
+        const totalScore = Number(
+            prompt('Tổng điểm bài:', problem.total_score ?? 10)
+        );
+        if (!Number.isFinite(totalScore) || totalScore <= 0) {
+            alert('Tổng điểm phải lớn hơn 0!');
+            return;
+        }
+
+        await api(
+            `/api/admin/contests/${contestId}/problems/${encodeURIComponent(problemId)}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify({
+                    title: newTitle.trim(),
+                    statement: newStatement,
+                    input_desc: newInputDesc,
+                    output_desc: newOutputDesc,
+                    sample_input: sampleInput,
+                    sample_output: sampleOutput,
+                    subtasks: subtasks,
+                    total_score: totalScore,
+                    time_limit: Number(problem.time_limit || 1),
+                    memory_limit: Number(problem.memory_limit || 256000)
+                })
+            }
         );
 
-        if (subtasksText === null) return;
-
-        alert(
-            'Hàm sửa này cần lấy subtasks đầy đủ từ dữ liệu quản trị. ' +
-            'API hiện tại chưa trả subtasks trong danh sách bài Contest, ' +
-            'nên chưa thể lưu chính xác nếu không bổ sung API lấy bài riêng.'
-        );
+        alert('Đã cập nhật bài riêng trong Contest!');
+        await loadContestList();
     } catch (error) {
         alert('Không sửa được bài: ' + error.message);
     }
 }
+
 
 
         async function loadContestList() {
