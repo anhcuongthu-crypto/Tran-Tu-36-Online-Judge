@@ -204,6 +204,21 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                 'PRAGMA table_info(problem_history)'
             ).fetchall()
         }
+    
+    # Nâng cấp cấu trúc bảng bài tập riêng trong cuộc thi.
+    with sqlite3.connect(app.config['DATABASE_PATH']) as contest_db:
+        columns = {
+            row[1] for row in contest_db.execute(
+                'PRAGMA table_info(contest_custom_problems)'
+            ).fetchall()
+        }
+
+        for column in ('sample_input', 'sample_output'):
+            if column not in columns:
+                contest_db.execute(
+                    f"ALTER TABLE contest_custom_problems "
+                    f"ADD COLUMN {column} TEXT NOT NULL DEFAULT ''"
+                )
 
         for column, definition in (
             ('before_count', 'INTEGER NOT NULL DEFAULT 0'),
