@@ -281,7 +281,7 @@ async function editProblem(p) {
       <input id="editTitle" value="${esc(p.title)}" required>
 
       <label for="editScore">Điểm tối đa</label>
-      <input id="editScore" type="number" min="0" value="${Number(p.total_score) || 0}" required>
+      <input id="editScore" type="number" min="0" value="${Number(p.total_score) || 0}" readonly>
 
       <label for="editStatement">Đề bài</label>
       <textarea id="editStatement">${esc(p.statement || '')}</textarea>
