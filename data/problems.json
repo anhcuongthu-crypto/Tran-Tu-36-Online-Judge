@@ -73,25 +73,22 @@
     "total_score": 100
   },
   {
-    "title": "Chu vi và Diện tích Hình chữ nhật",
-    "id": "chu-vi-dien-tich-hcn",
     "category": "C++ Cơ Bản",
     "difficulty": "Rất Dễ",
-    "statement": "Cho chiều dài d và chiều rộng r của hình chữ nhật. Hãy tính và in ra chu vi và diện tích của hình chữ nhật đó.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
+    "explanation": "Chu vi = (4 + 5) * 2 = 18\nDiện tích = 4 * 5 = 20",
+    "id": "chu-vi-dien-tich-hcn",
     "input_format": "Một dòng chứa hai số nguyên dương d và r cách nhau bởi khoảng trắng.",
+    "memory_limit": 256000,
     "output_format": "Dòng 1 ghi chu vi hình chữ nhật.\nDòng 2 ghi diện tích hình chữ nhật.",
     "sample_input": "4 5",
     "sample_output": "18\n20",
-    "explanation": "Chu vi = (4 + 5) * 2 = 18\nDiện tích = 4 * 5 = 20",
-    "time_limit": 1,
-    "memory_limit": 256000,
-    "total_score": 100,
+    "statement": "Cho chiều dài d và chiều rộng r của hình chữ nhật. Hãy tính và in ra chu vi và diện tích của hình chữ nhật đó.\n\nYêu cầu: Sử dụng kiểu dữ liệu số nguyên 32-bit (kiểu `int` trong C++).",
     "subtasks": [
       {
+        "constraints": "1 <= d, r <= 1000",
         "id": "sub1",
         "name": "Subtask 1",
         "score": 100,
-        "constraints": "1 <= d, r <= 1000",
         "tests": [
           {
             "input": "4 5",
@@ -107,7 +104,10 @@
           }
         ]
       }
-    ]
+    ],
+    "time_limit": 1,
+    "title": "Chu vi và Diện tích Hình chữ nhật",
+    "total_score": 100
   },
   {
     "title": "Chia bánh - Phép chia lấy nguyên và dư",
