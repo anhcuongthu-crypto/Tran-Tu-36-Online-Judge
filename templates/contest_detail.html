@@ -10,12 +10,13 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px Arial,sans-serif}
 a{color:#b9b0ff;text-decoration:none}
-header{padding:18px max(5%,calc((100% - 1100px)/2));border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+header{padding:18px max(5%,calc((100% - 1100px)/2));border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{font-size:20px;font-weight:bold}
 main{max-width:1100px;margin:30px auto;padding:0 18px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:20px;min-width:0}
 h1{font-size:28px;margin:14px 0}
 h2{font-size:20px;margin-top:0}
+h3{overflow-wrap:anywhere}
 .muted{color:var(--muted);line-height:1.7}
 .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}
 .badge{display:inline-block;padding:6px 10px;background:#263650;border-radius:30px;font-size:12px}
@@ -24,7 +25,7 @@ h2{font-size:20px;margin-top:0}
 .score{color:#b9b0ff;white-space:nowrap}
 input,select,textarea{width:100%;padding:12px;margin:7px 0 15px;background:#0b1222;color:var(--text);border:1px solid var(--line);border-radius:8px}
 textarea{min-height:160px;resize:vertical;font-family:Consolas,monospace}
-button{background:var(--primary);color:white;border:0;border-radius:8px;padding:11px 15px;font-weight:bold;cursor:pointer}
+button{background:var(--primary);color:white;border:0;border-radius:8px;padding:11px 15px;font-weight:bold;cursor:pointer;margin:3px}
 button:disabled{opacity:.5;cursor:not-allowed}
 .secondary{background:#374151}
 table{width:100%;border-collapse:collapse}
@@ -96,19 +97,12 @@ th{color:var(--muted)}
 const $ = id => document.getElementById(id);
 
 function resolveContestId() {
-  // ID Flask truyền vào template
   const raw = document.body.dataset.contestId || '';
-  if (/^\d+$/.test(raw) && Number(raw) > 0) {
-    return Number(raw);
-  }
+  if (/^\d+$/.test(raw) && Number(raw) > 0) return Number(raw);
 
-  // URL dạng /contests/123
   const match = location.pathname.match(/\/contests\/(\d+)\/?$/);
-  if (match && Number(match[1]) > 0) {
-    return Number(match[1]);
-  }
+  if (match && Number(match[1]) > 0) return Number(match[1]);
 
-  // URL dạng /contest_detail.html?id=123
   const query = new URLSearchParams(location.search).get('id');
   if (query && /^\d+$/.test(query) && Number(query) > 0) {
     return Number(query);
@@ -134,7 +128,8 @@ async function api(url, options = {}) {
     ...options,
     headers: {
       ...(options.headers || {}),
-      ...(options.body ? {'Content-Type':'application/json'} : {})
+      ...(options.body !== undefined
+        ? {'Content-Type':'application/json'} : {})
     }
   });
 
@@ -142,14 +137,14 @@ async function api(url, options = {}) {
   let data;
 
   try {
-    data = JSON.parse(raw);
+    data = raw ? JSON.parse(raw) : {};
   } catch {
     console.error('API response:', response.status, url, raw);
     throw new Error(`HTTP ${response.status}: API không trả JSON. URL: ${url}`);
   }
 
   if (!response.ok) {
-    throw new Error(data.error || `HTTP ${response.status}`);
+    throw new Error(data.error || data.message || `HTTP ${response.status}`);
   }
 
   return data;
@@ -158,7 +153,9 @@ async function api(url, options = {}) {
 function dateText(value) {
   if (!value) return 'Chưa xác định';
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString('vi-VN');
+  return Number.isNaN(d.getTime())
+    ? String(value)
+    : d.toLocaleString('vi-VN');
 }
 
 const stateText = {
@@ -240,32 +237,26 @@ function showProblem(pid) {
     $('problems').insertAdjacentElement('afterend', box);
   }
 
-box.innerHTML = `
+  box.innerHTML = `
     <h2>${esc(p.title)}</h2>
     <p class="muted">ID: ${esc(p.id)} · ${Number(p.total_score) || 0} điểm</p>
 
     <h3>Đề bài</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.statement || 'API chưa cung cấp nội dung đề.')}</div>
 
-    <h3>Input</h3>
+    <h3>Dữ liệu vào</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.input_desc || 'Chưa có mô tả.')}</div>
 
-    <h3>Output</h3>
+    <h3>Dữ liệu ra</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.output_desc || 'Chưa có mô tả.')}</div>
 
-    <h3>Ví dụ</h3>
-    <p><b>Input mẫu</b></p>
-    <pre style="white-space:pre-wrap;background:#0b1222;padding:12px;border-radius:8px;overflow:auto">${esc(p.sample_input || 'Chưa có input mẫu.')}</pre>
-
-    <p><b>Output mẫu</b></p>
-    <pre style="white-space:pre-wrap;background:#0b1222;padding:12px;border-radius:8px;overflow:auto">${esc(p.sample_output || 'Chưa có output mẫu.')}</pre>
-
     <p>
-        <button id="chooseProblem">Nộp bài này</button>
-        ${isAdmin && p.is_custom ? ' <button id="editProblem" class="secondary">Sửa bài</button>' : ''}
+      <button id="chooseProblem">Nộp bài này</button>
+      ${isAdmin && p.is_custom ? ' <button id="editProblem" class="secondary">Sửa bài</button>' : ''}
     </p>
     <div id="editArea"></div>
-`;
+  `;
+
   $('chooseProblem').onclick = () => {
     $('problemId').value = String(p.id);
     $('submitForm').scrollIntoView({behavior:'smooth'});
@@ -275,169 +266,192 @@ box.innerHTML = `
     $('editProblem').onclick = () => editProblem(p);
   }
 
-  box.scrollIntoView({behavior:'smooth',block:'start'});
+  box.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 async function editProblem(p) {
   const area = $('editArea');
-  area.innerHTML = '<p class="muted">Đang tải bài...</p>';
+  if (!area) return;
 
-  try {
-    const data = await api(
-      `/api/admin/contests/${CONTEST_ID}/problems/${encodeURIComponent(p.id)}`
-    );
+  area.innerHTML = `
+    <div class="editbox">
+      <h3>Sửa bài thi</h3>
 
-    area.innerHTML = `
-      <div class="editbox">
-        <h3>Sửa bài ${esc(p.id)}</h3>
-        <label>Tên bài</label><input id="eTitle" maxlength="200">
-        <label>Đề bài</label><textarea id="eStatement"></textarea>
-        <label>Input</label><textarea id="eInput"></textarea>
-        <label>Output</label><textarea id="eOutput"></textarea>
-        <label>Tổng điểm</label><input id="eTotal" type="number" min="1">
-        <label>Giới hạn thời gian (giây)</label><input id="eTime" type="number" min="0.01" step="any">
-        <label>Giới hạn bộ nhớ (KB)</label><input id="eMemory" type="number" min="1">
-        <label>Subtasks (JSON)</label><textarea id="eSubtasks" style="min-height:280px"></textarea>
-        <button id="saveEdit">Lưu thay đổi</button>
-        <button id="cancelEdit" class="secondary">Hủy</button>
-        <div id="editMessage" class="status"></div>
-      </div>
-    `;
+      <label for="editTitle">Tên bài</label>
+      <input id="editTitle" value="${esc(p.title)}" required>
 
-    $('eTitle').value = data.title || '';
-    $('eStatement').value = data.statement || '';
-    $('eInput').value = data.input_desc || '';
-    $('eOutput').value = data.output_desc || '';
-    $('eTotal').value = data.total_score ?? 10;
-    $('eTime').value = data.time_limit ?? 1;
-    $('eMemory').value = data.memory_limit ?? 256000;
-    $('eSubtasks').value = JSON.stringify(data.subtasks || [], null, 2);
+      <label for="editScore">Điểm tối đa</label>
+      <input id="editScore" type="number" min="0" value="${Number(p.total_score) || 0}" required>
 
-    $('cancelEdit').onclick = () => area.innerHTML = '';
+      <label for="editStatement">Đề bài</label>
+      <textarea id="editStatement">${esc(p.statement || '')}</textarea>
 
-    $('saveEdit').onclick = async () => {
-      const msg = $('editMessage');
-      let subtasks;
+      <label for="editInput">Mô tả dữ liệu vào</label>
+      <textarea id="editInput">${esc(p.input_desc || '')}</textarea>
 
-      try {
-        subtasks = JSON.parse($('eSubtasks').value);
-        if (!Array.isArray(subtasks)) throw new Error('Subtasks phải là mảng.');
-      } catch (e) {
-        msg.className = 'status error';
-        msg.textContent = 'JSON không hợp lệ: ' + e.message;
-        return;
-      }
+      <label for="editOutput">Mô tả dữ liệu ra</label>
+      <textarea id="editOutput">${esc(p.output_desc || '')}</textarea>
 
-      const body = {
-        title:$('eTitle').value.trim(),
-        statement:$('eStatement').value,
-        input_desc:$('eInput').value,
-        output_desc:$('eOutput').value,
-        total_score:Number($('eTotal').value),
-        time_limit:Number($('eTime').value),
-        memory_limit:Number($('eMemory').value),
-        subtasks
-      };
+      <button id="saveProblem">Lưu thay đổi</button>
+      <button id="cancelEdit" class="secondary">Hủy</button>
+      <div id="editMessage" class="status"></div>
+    </div>
+  `;
 
-      if (!body.title || !body.statement.trim() ||
-          body.total_score <= 0 || body.time_limit <= 0 ||
-          body.memory_limit <= 0) {
-        msg.className = 'status error';
-        msg.textContent = 'Kiểm tra lại tên, đề bài và giới hạn.';
-        return;
-      }
+  $('cancelEdit').onclick = () => {
+    area.innerHTML = '';
+  };
 
-      $('saveEdit').disabled = true;
-      msg.textContent = 'Đang lưu...';
+  $('saveProblem').onclick = async () => {
+    const title = $('editTitle').value.trim();
+    const score = Number($('editScore').value);
+    const statement = $('editStatement').value;
+    const input_desc = $('editInput').value;
+    const output_desc = $('editOutput').value;
+    const message = $('editMessage');
+    const button = $('saveProblem');
 
-      try {
-        await api(
-          `/api/admin/contests/${CONTEST_ID}/problems/${encodeURIComponent(p.id)}`,
-          {method:'PUT',body:JSON.stringify(body)}
-        );
-        msg.className = 'status success';
-        msg.textContent = 'Đã lưu bài thành công.';
-        await loadContest();
-      } catch (e) {
-        msg.className = 'status error';
-        msg.textContent = e.message;
-      } finally {
-        if ($('saveEdit')) $('saveEdit').disabled = false;
-      }
-    };
-  } catch (e) {
-    area.innerHTML = `<p class="error">${esc(e.message)}</p>`;
-  }
+    if (!title) {
+      message.textContent = 'Tên bài không được để trống.';
+      message.className = 'status error';
+      return;
+    }
+
+    if (!Number.isFinite(score) || score < 0) {
+      message.textContent = 'Điểm tối đa không hợp lệ.';
+      message.className = 'status error';
+      return;
+    }
+
+    button.disabled = true;
+    message.textContent = 'Đang lưu...';
+    message.className = 'status';
+
+    try {
+      /*
+        Endpoint sửa bài phải khớp với backend Flask của m.
+        Nếu backend dùng URL hoặc cấu trúc khác, cần sửa đoạn fetch này.
+      */
+      const result = await api(`/api/problems/${encodeURIComponent(p.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title,
+          total_score: score,
+          statement,
+          input_desc,
+          output_desc
+        })
+      });
+
+      message.textContent = result.message || 'Đã gửi yêu cầu lưu.';
+      message.className = 'status success';
+
+      // Cập nhật giao diện ngay; tải lại dữ liệu để xác nhận từ server.
+      await loadContest();
+      showProblem(p.id);
+    } catch (error) {
+      message.textContent = 'Không lưu được: ' + error.message;
+      message.className = 'status error';
+    } finally {
+      button.disabled = false;
+    }
+  };
 }
 
 async function loadLeaderboard() {
-  const data = await api(`/api/contests/${CONTEST_ID}/leaderboard`);
-
-  if (!data.length) {
-    $('leaderboard').innerHTML = '<p class="muted">Chưa có kết quả.</p>';
-    return;
-  }
-
-  $('leaderboard').innerHTML = `
-    <table>
-      <thead><tr><th>#</th><th>Thí sinh</th><th>Điểm</th><th>AC</th></tr></thead>
-      <tbody>${data.map((x, i) => `
-        <tr><td>${i + 1}</td><td>${esc(x.username)}</td>
-        <td>${Number(x.score) || 0}</td><td>${Number(x.solved) || 0}</td></tr>
-      `).join('')}</tbody>
-    </table>
-  `;
-}
-
-$('submitForm').addEventListener('submit', async e => {
-  e.preventDefault();
-
-  if (!contestData || contestData.state !== 'running') {
-    $('submitMessage').className = 'status error';
-    $('submitMessage').textContent = 'Cuộc thi hiện không nhận bài nộp.';
-    return;
-  }
-
-  const source_code = $('sourceCode').value;
-  if (!source_code.trim()) {
-    $('submitMessage').textContent = 'Mã nguồn không được để trống.';
-    return;
-  }
-
-  $('submitButton').disabled = true;
-  $('submitMessage').textContent = 'Đang gửi bài...';
+  const box = $('leaderboard');
 
   try {
-    const result = await api(`/api/contests/${CONTEST_ID}/submit`, {
-      method:'POST',
-      body:JSON.stringify({
-        problem_id:$('problemId').value,
-        language_id:Number($('language').value),
-        source_code
+    const data = await api(`/api/contests/${CONTEST_ID}/leaderboard`);
+    const rows = Array.isArray(data)
+      ? data
+      : (data.leaderboard || data.results || data.users || []);
+
+    if (!rows.length) {
+      box.innerHTML = '<p class="muted">Chưa có dữ liệu xếp hạng.</p>';
+      return;
+    }
+
+    box.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Hạng</th>
+            <th>Thí sinh</th>
+            <th>Điểm</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${esc(r.username || r.name || r.user || 'Ẩn danh')}</td>
+              <td>${esc(r.score ?? r.total_score ?? 0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (error) {
+    box.innerHTML = `<p class="muted">Không tải được bảng xếp hạng: ${esc(error.message)}</p>`;
+  }
+}
+
+$('submitForm').addEventListener('submit', async event => {
+  event.preventDefault();
+
+  const problemId = $('problemId').value;
+  const sourceCode = $('sourceCode').value;
+  const languageId = Number($('language').value);
+  const button = $('submitButton');
+  const message = $('submitMessage');
+
+  if (!problemId || !sourceCode.trim()) {
+    message.textContent = 'Hãy chọn bài và nhập mã nguồn.';
+    message.className = 'status error';
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = 'Đang gửi bài...';
+  message.className = 'status';
+
+  try {
+    const result = await api('/api/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        problem_id: problemId,
+        contest_id: CONTEST_ID,
+        language_id: languageId,
+        source_code: sourceCode
       })
     });
 
-    $('submitMessage').className = 'status success';
-    $('submitMessage').textContent =
-      `Đã gửi bài!\nSubmission ID: ${result.submission_id}\nTrạng thái: ${result.status}`;
-    setTimeout(() => loadLeaderboard().catch(console.error), 2500);
-  } catch (e) {
-    $('submitMessage').className = 'status error';
-    $('submitMessage').textContent = e.message;
+    message.textContent =
+      result.message ||
+      result.status ||
+      (result.submission_id
+        ? `Đã gửi bài. Mã bài nộp: ${result.submission_id}`
+        : 'Máy chủ đã nhận yêu cầu nộp bài.');
+
+    message.className = 'status success';
+    await loadLeaderboard();
+  } catch (error) {
+    message.textContent = 'Nộp bài thất bại: ' + error.message;
+    message.className = 'status error';
   } finally {
-    $('submitButton').disabled = !contestData || contestData.state !== 'running';
+    button.disabled = !contestData || contestData.state !== 'running';
   }
 });
 
-(async function init() {
+async function init() {
   if (!CONTEST_ID) {
     $('contestHeader').innerHTML = `
-      <h1>Thiếu ID contest</h1>
-      <p class="muted">Mở trang qua /contests/ID, ví dụ /contests/1. Nếu đang xem sandbox preview, hãy mở website Flask đã deploy.</p>
+      <h2>Không xác định được cuộc thi</h2>
+      <p class="muted">Kiểm tra URL hoặc đường dẫn trang contest.</p>
     `;
-    $('contestInfo').textContent = 'Chưa có ID contest.';
-    $('problems').textContent = 'Không thể tải bài.';
-    $('leaderboard').textContent = 'Không thể tải bảng xếp hạng.';
+    $('problems').textContent = 'Không có mã cuộc thi.';
+    $('leaderboard').textContent = 'Không có dữ liệu.';
     return;
   }
 
@@ -445,10 +459,18 @@ $('submitForm').addEventListener('submit', async e => {
     await loadAdmin();
     await loadContest();
     await loadLeaderboard();
-  } catch (e) {
-    $('contestHeader').innerHTML = `<div class="error">${esc(e.message)}</div>`;
+  } catch (error) {
+    $('contestHeader').innerHTML = `
+      <h2 class="error">Không tải được cuộc thi</h2>
+      <p class="error">${esc(error.message)}</p>
+      <p class="muted">Kiểm tra API và log trên Render.</p>
+    `;
+    $('problems').textContent = 'Không tải được danh sách bài.';
   }
-})();
+}
+
+init();
 </script>
 </body>
 </html>
+
