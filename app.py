@@ -615,6 +615,58 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             item['details'] = json.loads(item.pop('details_json') or '[]')
             result.append(item)
         return jsonify(result)
+    
+    @app.get('/api/submissions/<int:submission_id>/code')
+    def submission_code(submission_id):
+        user = current_user()
+        if not user:
+            return jsonify(error='Cần đăng nhập.'), 401
+
+        with connect(app.config['DATABASE_PATH']) as db:
+            row = db.execute(
+                '''SELECT id, user_id, problem_id, source_code,
+                          score, max_score, contest_id
+                   FROM submissions WHERE id=?''',
+                (submission_id,)
+            ).fetchone()
+
+            if not row:
+                return jsonify(error='Không tìm thấy bài nộp.'), 404
+
+            is_mine = row['user_id'] == user['id']
+            is_admin = bool(user['is_admin'])
+
+            if not is_mine and not is_admin:
+                if row['contest_id'] is None:
+                    full = db.execute(
+                        '''SELECT 1 FROM submissions
+                           WHERE user_id=? AND problem_id=?
+                             AND score >= max_score
+                             AND contest_id IS NULL
+                           LIMIT 1''',
+                        (user['id'], row['problem_id'])
+                    ).fetchone()
+                else:
+                    full = db.execute(
+                        '''SELECT 1 FROM submissions
+                           WHERE user_id=? AND problem_id=?
+                             AND score >= max_score
+                             AND contest_id=?
+                           LIMIT 1''',
+                        (user['id'], row['problem_id'], row['contest_id'])
+                    ).fetchone()
+
+                if not full:
+                    return jsonify(
+                        error='Bạn cần FULL bài này để xem code của người khác.'
+                    ), 403
+
+        return jsonify({
+            'id': row['id'],
+            'problem_id': row['problem_id'],
+            'source_code': row['source_code']
+        })
+
 
     @app.get('/api/submissions/<int:submission_id>/status')
     def submission_status(submission_id):
