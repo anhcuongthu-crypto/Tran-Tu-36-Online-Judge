@@ -425,6 +425,7 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     'title': p.get('title', pid),
                     'total_score': p['total_score'],
                     'is_custom': False,
+                    'subtasks': p.get('subtasks', []),
                     'statement': p.get('statement', ''),
                     'input_desc': p.get('input_desc', ''),
                     'output_desc': p.get('output_desc', ''),
