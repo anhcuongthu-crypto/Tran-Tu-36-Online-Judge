@@ -410,6 +410,7 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     'title': p['title'],
                     'total_score': p['total_score'],
                     'is_custom': True,
+                    'subtasks': json.loads(p.get('subtasks_json') or '[]'),
                     'statement': p['statement'],
                     'input_desc': p['input_desc'],
                     'output_desc': p['output_desc'],
