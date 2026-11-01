@@ -250,6 +250,20 @@ function showProblem(pid) {
     <h3>Dữ liệu ra</h3>
     <div style="white-space:pre-wrap;line-height:1.8">${esc(p.output_desc || 'Chưa có mô tả.')}</div>
 
+    <h3>Ràng buộc</h3>
+    <div style="display:grid;gap:10px">
+      ${(Array.isArray(p.subtasks) ? p.subtasks : []).map((s, i) => {
+        const condition = s.constraints || s.condition || s.description || s.limit || s.note || s.requirement || s.test_description || '';
+        return `
+          <div style="padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#0b1222">
+            <b>${esc(s.name || ('Subtask ' + (i + 1)))}</b>
+            <span class="muted"> · ${Number(s.score) || 0} điểm</span>
+            <div style="white-space:pre-wrap;line-height:1.8;margin-top:6px">${esc(condition || 'Không có ràng buộc riêng.')}</div>
+          </div>
+        `;
+      }).join('') || '<div class="muted">Bài này chưa có thông tin ràng buộc.</div>'}
+    </div>
+
     <p>
       <button id="chooseProblem">Nộp bài này</button>
       ${isAdmin && p.is_custom ? ' <button id="editProblem" class="secondary">Sửa bài</button>' : ''}
