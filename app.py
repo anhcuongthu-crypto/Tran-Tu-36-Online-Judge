@@ -382,7 +382,7 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             custom_rows = db.execute(
                 '''SELECT problem_id, title, statement,
                           input_desc, output_desc, total_score,
-                          sample_input, sample_output
+                          sample_input, sample_output, subtasks_json
                    FROM contest_custom_problems
                    WHERE contest_id=?''',
                 (contest_id,)
@@ -474,7 +474,12 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             return jsonify(error='Không tìm thấy bài'), 404
         public = {k: v for k, v in p.items() if k != 'subtasks'}
         public['subtasks'] = [
-            {'id': s['id'], 'name': s['name'], 'score': s['score']}
+            {
+                'id': s.get('id', ''),
+                'name': s.get('name', ''),
+                'score': s.get('score', 0),
+                'constraints': s.get('constraints', '')
+            }
             for s in p['subtasks']
         ]
         return jsonify(public)
