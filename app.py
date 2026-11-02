@@ -288,11 +288,24 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
                     )
                 )
 
+    # Cache ngân hàng đề trong bộ nhớ. Tránh gọi GitHub API trên mỗi
+    # request (trước đây mỗi lần mở trang/API đều tải problems.json từ xa).
+    _problems_cache = {'mtime_ns': None, 'size': None, 'data': None}
+
     def problems():
-        if os.getenv('GITHUB_TOKEN'):
-            data, _ = github_read_problems()
-            return data
-        return load_problems(app.config['PROBLEMS_PATH'])
+        path = Path(app.config['PROBLEMS_PATH'])
+        stat = path.stat()
+
+        if (
+            _problems_cache['data'] is None
+            or _problems_cache['mtime_ns'] != stat.st_mtime_ns
+            or _problems_cache['size'] != stat.st_size
+        ):
+            _problems_cache['data'] = load_problems(path)
+            _problems_cache['mtime_ns'] = stat.st_mtime_ns
+            _problems_cache['size'] = stat.st_size
+
+        return _problems_cache['data']
 
     admin2_username = os.getenv('ADMIN2_USERNAME', '').strip()
     admin2_password = os.getenv('ADMIN2_PASSWORD', '')
