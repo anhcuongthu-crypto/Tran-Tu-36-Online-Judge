@@ -57,27 +57,36 @@ function renderProblems(items) {
 }
 
 async function refresh() {
-    try {
-        const me = await api('/api/me');
-        const u = me.user;
-const authSection = document.querySelector('#auth-section');
-if (authSection) {
-    authSection.style.display = u ? 'none' : 'grid';
-}
+    // Tải các dữ liệu độc lập cùng lúc thay vì chờ từng API tuần tự.
+    const [meResult, problemsResult, leaderboardResult] = await Promise.allSettled([
+        api('/api/me'),
+        api('/api/problems'),
+        api('/api/leaderboard')
+    ]);
+
+    let user = null;
+
+    if (meResult.status === 'fulfilled') {
+        user = meResult.value.user;
+        const authSection = document.querySelector('#auth-section');
+        if (authSection) authSection.style.display = user ? 'none' : 'grid';
+
         const status = document.querySelector('#user-status');
-        if (status) {
-            status.textContent = u
-                ? `Xin chào, ${u.username}`
-                : 'Chưa đăng nhập';
-        }
+        if (status) status.textContent = user
+            ? `Xin chào, ${user.username}`
+            : 'Chưa đăng nhập';
 
         const logout = document.querySelector('#logout-button');
-        if (logout) logout.hidden = !u;
+        if (logout) logout.hidden = !user;
 
         const admin = document.querySelector('#admin-link');
-        if (admin) admin.hidden = !(u && u.is_admin);
+        if (admin) admin.hidden = !(user && user.is_admin);
+    } else {
+        console.error('Lỗi tải thông tin tài khoản:', meResult.reason);
+    }
 
-        if (u) {
+    if (user) {
+        try {
             const h = await api('/api/submissions');
             const el = document.querySelector('#history');
 
@@ -86,12 +95,7 @@ if (authSection) {
                     ? '<table><tr><th>Bài</th><th>Kết quả</th><th>Điểm</th><th>Thời gian</th></tr>' +
                       h.map(x => `
                         <tr>
-                            <td>
-                                <a class="text-link"
-                                   href="/problems/${encodeURIComponent(x.problem_id)}">
-                                    ${escapeHtml(x.problem_id)}
-                                </a>
-                            </td>
+                            <td><a class="text-link" href="/problems/${encodeURIComponent(x.problem_id)}">${escapeHtml(x.problem_id)}</a></td>
                             <td>${escapeHtml(x.verdict)}</td>
                             <td>${x.score}/${x.max_score}</td>
                             <td>${escapeHtml(x.created_at)}</td>
@@ -100,13 +104,13 @@ if (authSection) {
                       '</table>'
                     : 'Chưa có bài nộp.';
             }
+        } catch (e) {
+            console.error('Lỗi tải lịch sử bài nộp:', e);
         }
-    } catch (e) {
-        console.error('Lỗi tải thông tin tài khoản:', e);
     }
 
-    try {
-        const p = await api('/api/problems');
+    if (problemsResult.status === 'fulfilled') {
+        const p = problemsResult.value;
         const el = document.querySelector('#problems');
 
         if (el) {
@@ -118,15 +122,13 @@ if (authSection) {
         if (count) count.textContent = p.length;
 
         const ac = document.querySelector('#admin-problem-count');
-        if (ac) {
-            ac.textContent = `${p.length} bài đang được nạp từ ngân hàng dữ liệu.`;
-        }
-    } catch (e) {
-        note(e.message);
+        if (ac) ac.textContent = `${p.length} bài đang được nạp từ ngân hàng dữ liệu.`;
+    } else {
+        note(problemsResult.reason?.message || 'Không tải được danh sách bài tập.');
     }
 
-    try {
-        const rows = await api('/api/leaderboard');
+    if (leaderboardResult.status === 'fulfilled') {
+        const rows = leaderboardResult.value;
         const el = document.querySelector('#rankings');
 
         if (el) {
@@ -143,8 +145,8 @@ if (authSection) {
                   '</tbody></table>'
                 : 'Chưa có thành tích. Hãy là người đầu tiên!';
         }
-    } catch (e) {
-        console.error('Lỗi tải bảng xếp hạng:', e);
+    } else {
+        console.error('Lỗi tải bảng xếp hạng:', leaderboardResult.reason);
     }
 }
 
