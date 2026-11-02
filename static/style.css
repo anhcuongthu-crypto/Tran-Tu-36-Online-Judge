@@ -47,3 +47,8 @@ input::placeholder,textarea::placeholder{color:#9aafbf!important}
 .subtask-row strong{color:#2879bd!important}
 footer{border-top-color:#dce8f2!important;color:#7891a5!important}
 @media(max-width:620px){.topbar{background:#fff!important}}
+
+/* Final palette cleanup */
+.profile-avatar{background:linear-gradient(135deg,#2879bd,#55a9d2)!important;box-shadow:0 10px 30px rgba(40,121,189,.18)!important}
+.profile-hero .eyebrow,.profile-form-card label{color:#2879bd!important}
+.color-row span{color:#688198!important}
