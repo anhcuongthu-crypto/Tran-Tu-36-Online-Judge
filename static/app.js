@@ -57,6 +57,14 @@ function renderProblems(items) {
 }
 
 async function refresh() {
+    // Chỉ tải dữ liệu trang chủ; tránh gọi API thừa trên mọi trang.
+    if (
+        !document.querySelector('#problems') &&
+        !document.querySelector('#rankings') &&
+        !document.querySelector('#history') &&
+        !document.querySelector('#auth-section')
+    ) return;
+
     // Tải các dữ liệu độc lập cùng lúc thay vì chờ từng API tuần tự.
     const [meResult, problemsResult, leaderboardResult] = await Promise.allSettled([
         api('/api/me'),
