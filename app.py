@@ -624,17 +624,14 @@ DATABASE_PATH=os.getenv('DATABASE_URL') or os.getenv(
             return jsonify(error='Cần đăng nhập.'), 401
         with connect(app.config['DATABASE_PATH']) as db:
             rows = db.execute(
-                '''SELECT id, problem_id, language_id, verdict,
-                          score, max_score, details_json, created_at, contest_id
-                   FROM submissions WHERE user_id=? ORDER BY id DESC LIMIT 200''',
+                '''SELECT id, problem_id, verdict, score, max_score, created_at
+                   FROM submissions
+                   WHERE user_id=?
+                   ORDER BY id DESC
+                   LIMIT 50''',
                 (user['id'],)
             ).fetchall()
-        result = []
-        for row in rows:
-            item = dict(row)
-            item['details'] = json.loads(item.pop('details_json') or '[]')
-            result.append(item)
-        return jsonify(result)
+        return jsonify([dict(row) for row in rows])
     
     @app.get('/api/submissions/<int:submission_id>/code')
     def submission_code(submission_id):
